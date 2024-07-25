@@ -1,8 +1,10 @@
+import json
 from pathlib import Path
+from typing import List
 
 import chromadb
 from langchain_chroma import Chroma
-from langchain_community.document_loaders import TextLoader
+from langchain_community.document_loaders import TextLoader, PyPDFLoader
 from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -19,12 +21,29 @@ COLLECTION_NAME = "vector-db-test"
 
 
 def query():
-    user_input = input("""Enter the query : \t""")
-    ret = langchain_chroma.as_retriever()
-    result1 = ret.invoke(user_input)
-    result: list[tuple[Document, float]] = langchain_chroma.similarity_search_with_relevance_scores(user_input, 10)
-    for doc in result:
-        print(doc[0].metadata["file_name"], doc[1])
+    contexts = []
+    question: list[str] = [
+        "How we can prevent cyber attack?",
+        "How AI is being used in field of agriculture?",
+        "How machine learning used to detect cyber attack?",
+        "How geopolitic risk analysis affect market volatility?",
+        "How sensors along with ML used to improve agriculture?",
+        "How market behaves during a pendamic? "
+    ]
+    for q in question:
+        c: list[str] = []
+        result: list[tuple[Document, float]] = langchain_chroma.similarity_search_with_relevance_scores(q, 5)
+        for doc in result:
+            c.append(doc[0].page_content)
+        contexts.append(c)
+    file = Path("sample.json")
+    file.touch()
+    file.write_text(
+        json.dumps({
+            "question": question,
+            "contexts": contexts
+        })
+    )
 
 
 def delete_all():
@@ -36,10 +55,10 @@ def delete_all():
 def embedd_all():
     print("Start embedding ...")
     references = Path("references")
-    all_docs=[]
+    all_docs = []
     for file in references.iterdir():
-        if file.is_file() and file.suffix.endswith(".txt"):
-            loader = TextLoader(file)
+        if file.is_file() and file.suffix.endswith(".pdf"):
+            loader = PyPDFLoader(file)
             documents = loader.load()
 
             text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
