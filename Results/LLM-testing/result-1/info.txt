@@ -1,0 +1,7 @@
+Embedding = HugguingFaceEmbedding,
+text splitter = RecursiveTextSplitter,
+searching algorithm = Max_marginal_relevance_search
+vector_store = ChromaDB
+
+
+

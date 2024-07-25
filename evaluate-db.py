@@ -7,13 +7,12 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_openai import OpenAI, ChatOpenAI
 from ragas import evaluate
 from ragas.embeddings import LangchainEmbeddingsWrapper
-from ragas.llms import LangchainLLMWrapper
 from ragas.metrics import (
     context_recall,
-    context_precision,
+    context_precision, answer_correctness, answer_relevancy, faithfulness, answer_similarity,
 )
 
-llm = OpenAI(model="gpt-4o-mini", temperature=0)
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 
 async def evaluate_dataset():
@@ -26,6 +25,10 @@ async def evaluate_dataset():
         metrics=[
             context_precision,
             context_recall,
+            faithfulness,
+            answer_relevancy,
+            answer_correctness,
+            answer_similarity
         ],
         llm=llm,
         embeddings=LangchainEmbeddingsWrapper(HuggingFaceEmbeddings())

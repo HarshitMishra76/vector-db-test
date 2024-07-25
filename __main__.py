@@ -66,7 +66,7 @@ def embedd_all():
             loader = PyPDFLoader(file)
             documents = loader.load()
             try:
-                text_splitter = SentenceTransformersTokenTextSplitter(tokens_per_chunk=300)
+                text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
                 docs: list[Document] = text_splitter.split_documents(documents)
             except Exception as e:
                 print(f"Something went wrong while splitting {file.name}")
