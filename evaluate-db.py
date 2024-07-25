@@ -1,24 +1,19 @@
-import os
 import asyncio
 import json
 from pathlib import Path
 
 from datasets import Dataset
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.llms.ollama import Ollama
+from langchain_openai import OpenAI, ChatOpenAI
+from ragas import evaluate
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.llms import LangchainLLMWrapper
 from ragas.metrics import (
     context_recall,
     context_precision,
 )
-from langchain_openai import OpenAI
-from ragas import evaluate
 
-llm = OpenAI(model_name="gpt-3.5-turbo")
-
-
-
+llm = OpenAI(model="gpt-4o-mini", temperature=0)
 
 
 async def evaluate_dataset():
@@ -32,7 +27,7 @@ async def evaluate_dataset():
             context_precision,
             context_recall,
         ],
-        # llm=LangchainLLMWrapper(get_llm("llama3")),
+        llm=llm,
         embeddings=LangchainEmbeddingsWrapper(HuggingFaceEmbeddings())
     )
 

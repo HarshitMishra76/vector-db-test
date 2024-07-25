@@ -7,7 +7,7 @@ from langchain_chroma import Chroma
 from langchain_community.document_loaders import TextLoader, PyPDFLoader
 from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter, SentenceTransformersTokenTextSplitter
 
 COLLECTION_NAME = "vector-db-test"
 
@@ -28,13 +28,18 @@ def query():
         "How machine learning used to detect cyber attack?",
         "How geopolitic risk analysis affect market volatility?",
         "How sensors along with ML used to improve agriculture?",
-        "How market behaves during a pendamic? "
+        "How market behaves during a pendamic? ",
+        "What is MLOps and how it is used to automate machine learning tasks? ",
+        "What is MLOps lifecycle? ",
+        "What is the architecture of MLOps?",
+        "What are the model registries are used for MLOps?",
+        "What are the challenges in MLOps?",
     ]
     for q in question:
         c: list[str] = []
-        result: list[tuple[Document, float]] = langchain_chroma.similarity_search_with_relevance_scores(q, 5)
+        result: list[Document] = langchain_chroma.max_marginal_relevance_search(q, 4)
         for doc in result:
-            c.append(doc[0].page_content)
+            c.append(doc.page_content)
         contexts.append(c)
     file = Path("sample.json")
     file.touch()
@@ -60,9 +65,13 @@ def embedd_all():
         if file.is_file() and file.suffix.endswith(".pdf"):
             loader = PyPDFLoader(file)
             documents = loader.load()
-
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
-            docs: list[Document] = text_splitter.split_documents(documents)
+            try:
+                text_splitter = SentenceTransformersTokenTextSplitter(tokens_per_chunk=300)
+                docs: list[Document] = text_splitter.split_documents(documents)
+            except Exception as e:
+                print(f"Something went wrong while splitting {file.name}")
+                print(f"Error is {e}")
+                continue
 
             for doc in docs:
                 doc.metadata = {
