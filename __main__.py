@@ -33,7 +33,7 @@ def create_collection():
 
 def query():
     contexts = []
-    question = [
+    question: list[str] = [
         "What are the key differences in data models between MongoDB and PostgreSQL?",
         "How do MongoDB and PostgreSQL handle unstructured and semi-structured data?",
         "Which database system, MongoDB or PostgreSQL, is more scalable, and why?",
@@ -52,7 +52,7 @@ def query():
         "How to use useEffect in React?",
         "How to use collections in PostgreSQL?",
         "How is MongoDB different from MySQL?"
-    ],
+    ]
 
     for q in question:
         c: list[str] = []

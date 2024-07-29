@@ -1,6 +1,0 @@
-Embedding = HugguingFaceEmbedding,
-text splitter = RecursiveTextSplitter,
-vector_store = Qdrant
-questions = 140
-
-
