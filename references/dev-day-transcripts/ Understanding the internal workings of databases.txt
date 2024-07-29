@@ -1,0 +1,2448 @@
+# tactiq.io free youtube transcript
+# Dev Day | Understanding the internal workings of databases
+# https://www.youtube.com/watch/YWUxgu7oYGM
+
+00:00:00.480 uh so welcome everyone to the D talk on
+00:00:02.960 internal ofof database and I'm
+00:00:06.319 Lo uh so here I'm here to talk about
+00:00:10.679 some of the internals of databases
+00:00:13.240 fundamentals of it and trying to provide
+00:00:16.160 some use case on top of it which we have
+00:00:17.960 built our own database for that um I
+00:00:22.000 might jump here and there between slides
+00:00:24.199 I might go fast I might go slow if you
+00:00:26.480 find something which you want me to
+00:00:28.199 correct or stop please feel free to do
+00:00:30.720 that uh I'm happy with it so let's get
+00:00:34.239 to the next slide so yeah this is my
+00:00:36.000 doodle and I already said my name I'm
+00:00:39.800 I'm working as a solution consultant at
+00:00:41.760 sah um so I have around like four years
+00:00:44.440 of experience all of it in sah um so
+00:00:48.600 it's been good for me I'm I'm
+00:00:51.000 predominantly a backend developer um um
+00:00:53.879 I worked a lot on dis systems I love
+00:00:56.160 working with the high scale systems
+00:00:58.239 that's what interests me is a lot
+00:01:00.440 and i a r enthusias like I love
+00:01:04.280 developing application rust it really
+00:01:06.560 gives me a easier way to solve uh High
+00:01:10.920 scale systems you don't have to worry
+00:01:12.720 too much about the data uh data there
+00:01:15.799 because it gives you those things out of
+00:01:17.640 the box uh and yeah personal some bit
+00:01:20.360 about me I'm an anime lover you will see
+00:01:22.200 lot more anime things in my slide and
+00:01:26.040 unfortunately I am a RCV fan and this
+00:01:29.360 Ison we couldn't do much better
+00:01:31.520 hopefully next time we will do
+00:01:34.520 much I know I'm in Chennai this is a
+00:01:37.640 hard place to be as a ACV fan but fine I
+00:01:42.079 have spent around like 10 years
+00:01:43.560 surviving school college and the work
+00:01:45.799 inment being RCV fan so I I think I can
+00:01:48.799 do
+00:01:49.799 it yeah cool uh so moving to the next
+00:01:54.399 thing so I think the first question that
+00:01:57.000 you would have all have in your mind why
+00:01:59.520 do we need to know the internals oft
+00:02:01.079 database uh I can simply write SQL
+00:02:03.320 queries at works and if it doesn't work
+00:02:05.840 I can put it in stack workflow they will
+00:02:07.320 give me some other answers you can like
+00:02:09.479 play with and get get it working why do
+00:02:12.080 you really have to know that anyone I
+00:02:14.040 think again disclaimer this will have a
+00:02:15.800 lot of question this session uh you have
+00:02:18.120 to be lot more local uh so please feel
+00:02:21.040 free to share your opinion it's
+00:02:22.440 completely fine any answers why do we
+00:02:25.400 really need
+00:02:27.480 to anyone
+00:02:50.360 sorry okay good any other
+00:02:53.319 answers any other
+00:02:57.720 perceptions yeah
+00:03:01.920 yeah if yeah there are a lot more to it
+00:03:05.040 uh okay it is how can I stop this
+00:03:10.879 okay this will go out right the yes I
+00:03:14.760 just have to wait for it
+00:03:16.879 is or I have to pull it
+00:03:21.319 down no the
+00:03:28.360 top cool I think it is hidden here but
+00:03:31.760 at least I will give you the statement
+00:03:34.439 uh have you heard of this statement
+00:03:36.239 mechanical sympathy anyone I think some
+00:03:39.720 of my colleagues will know about that
+00:03:41.519 term we use it a lot in our uh but
+00:03:46.439 uh cool thanks that's much better uh
+00:03:51.080 still okay I will close this gu good um
+00:03:55.720 okay have you heard of this term
+00:03:57.000 mechanical sympathy anyone
+00:04:00.599 no yeah I know I know we know that but
+00:04:03.920 yeah I got introduced to this themm uh
+00:04:06.159 recently but I was doing it even before
+00:04:08.680 it's a very interesting uh analogy that
+00:04:11.400 someone has come up with uh
+00:04:15.959 why
+00:04:25.960 I okay now it's working cool so there is
+00:04:29.360 a codee made by a he driver named Jackie
+00:04:32.479 stewards uh he said you don't need to be
+00:04:35.120 a engineer to be a racing driver you
+00:04:37.440 just need to have a mechanical sympathy
+00:04:39.600 what does that mean like what is that
+00:04:42.199 mechanical sympathy so we all drive cars
+00:04:45.000 right at least bikes cars something that
+00:04:47.000 you know how to drive so you would have
+00:04:50.960 come up with some assumption saying that
+00:04:53.160 like I have to do this to get this done
+00:04:55.320 we all have been doing engine brakes
+00:04:57.440 right it is not it is good to do engine
+00:04:59.720 breaks in a slopy thing it is it's like
+00:05:03.000 when we take a overtake we do reduce our
+00:05:06.560 gears if the car is not giving us the
+00:05:09.400 throttle right why because like inside
+00:05:13.759 the gear switch happens and it will not
+00:05:15.919 give you the throttle at that point so
+00:05:17.560 you need to come back which will give
+00:05:19.280 you a better throttle so understanding
+00:05:21.199 those things is what he said make him a
+00:05:23.520 better driver uh because he knows how
+00:05:25.720 the vehicle works so he can use it to
+00:05:28.960 the optimal
+00:05:30.319 but how does it connected to the
+00:05:34.240 database I okay I was clicking at the
+00:05:37.360 thing okay how does it connected to
+00:05:38.919 database same thing like someone said
+00:05:40.560 right I want to do it efficiently I want
+00:05:43.160 to optimize it to the code I don't want
+00:05:45.560 uh mere optimal thing right I want to do
+00:05:48.479 it in a much better way and databases
+00:05:51.360 are the core of lot of our applications
+00:05:53.680 now most of our applications are
+00:05:55.759 dependent on databases that's what the
+00:05:58.520 major bottleneck for most of the high
+00:06:00.840 scale systems right so how does it
+00:06:03.280 related to database so when you know the
+00:06:05.280 internals of database you can use the
+00:06:08.199 pick the right database for your use
+00:06:09.800 case right you cannot use the same
+00:06:12.120 database for every use case one could be
+00:06:14.440 a analytical use case where you can use
+00:06:16.880 you cannot use a transaction data sore
+00:06:18.400 for that similarly one could be a what
+00:06:22.280 can one could be a different thing like
+00:06:24.319 uh I it can be unstructured data you
+00:06:26.479 cannot use a structur data relational
+00:06:28.319 table for such use cases so you need to
+00:06:30.400 understand how it does actually works
+00:06:32.240 behind the scene where to actually put
+00:06:34.080 the index where not to put an index
+00:06:36.160 which index is optimal for this use case
+00:06:38.599 whereas which index is optimized for
+00:06:40.280 other use case well you know the
+00:06:42.280 internals of it it makes you do a better
+00:06:44.720 job in what you do so that's what Jackie
+00:06:47.400 also said like it makes it him better
+00:06:50.080 driver if he knows the understanding if
+00:06:52.360 he has the understanding of how the car
+00:06:54.400 Works behind the SC similarly it it
+00:06:56.960 makes us a better developer if we know
+00:06:59.240 the of database and yeah
+00:07:02.479 disclaimer uh database knowledge is
+00:07:04.879 subjected to Market Risk please read all
+00:07:06.879 database related document thoroughly uh
+00:07:09.440 because each database has it own
+00:07:11.160 implementation of whatever things they
+00:07:12.680 want to talk about because they have
+00:07:14.800 taken different tradeoff for their use
+00:07:16.919 case which you need to understand when
+00:07:18.919 to use what they have done it for a
+00:07:20.919 reason we need to understand when to use
+00:07:22.599 what database uh again another
+00:07:26.160 disclaimer I won't be talking about in
+00:07:29.560 memory databases I will be specifically
+00:07:31.919 talking about disas databases and I will
+00:07:34.360 be talking about single instance
+00:07:35.759 databases that means uh I will not cover
+00:07:38.440 anything related to distributor systems
+00:07:40.440 or I will not cover anything related to
+00:07:42.639 implementing a inmemory database like f
+00:07:46.000 is and whatnot and the next thing so for
+00:07:50.879 the sake of Simplicity let's assume that
+00:07:52.879 we just visualize one table in the
+00:07:55.520 database okay uh basically database
+00:07:58.280 replicat the same thing for multiple
+00:08:00.159 tables so you can visualize that how a
+00:08:02.840 particular table works then the same
+00:08:04.720 thing will be replicated for the other
+00:08:06.120 tables also uh any questions so
+00:08:09.400 far am I going too fuse too slow optimal
+00:08:13.039 right cool uh cool the first anime
+00:08:16.520 reference let's go uh so what database
+00:08:21.599 file organization so why do we really
+00:08:23.759 need a database we can simply write it
+00:08:25.639 to a file system right I just need a
+00:08:27.560 persistence I just need a way to write
+00:08:29.680 to something and read it from something
+00:08:31.520 that will be persistent why do we really
+00:08:33.479 need
+00:08:34.360 database that question is still valid
+00:08:36.839 you can still write to file system and
+00:08:38.880 you can retrieve it you can do all those
+00:08:40.679 things basically database is just a
+00:08:42.640 bunch of files organized in a specific
+00:08:44.480 format uh it doesn't do anything that
+00:08:48.000 you don't do in a basic things right in
+00:08:51.240 our basic College we would have like
+00:08:52.959 simply open the file read from something
+00:08:55.760 right write it back to word that's
+00:08:57.480 basically what database do but they do
+00:08:59.640 it in a way it is highly optimized for
+00:09:02.560 storage access and update uh so we will
+00:09:06.000 talk about that later how do how do they
+00:09:08.959 efficiently do it how do they make sure
+00:09:11.200 that access is much more optimal for a
+00:09:13.480 particular use case which they have
+00:09:15.480 picked up to solve for and uh how do
+00:09:18.480 they make sure that they won't use
+00:09:20.040 unnecessary storage also for writing a
+00:09:22.399 particular record uh so most of the
+00:09:25.160 databases if you see they will have
+00:09:27.839 separate files for each table you can
+00:09:30.640 think of it like one file for each table
+00:09:33.760 uh except one uh use case except one
+00:09:37.079 database which is sqlite how many of you
+00:09:39.440 have used
+00:09:40.800 it what anyone have thought of it why as
+00:09:44.600 my sqlite is different from other there
+00:09:47.480 is a term for it they are called embeded
+00:09:49.959 databases they usually sit with apps
+00:09:52.480 they usually sit with uh websites they
+00:09:54.839 usually try to sit with the edge devices
+00:09:57.160 so they don't need a very high they are
+00:09:59.200 not they not supposed they are not meant
+00:10:01.600 for handling High scale use cases they
+00:10:04.120 are meant for handling a very specific
+00:10:06.079 small use case that's why they thought
+00:10:08.079 like I don't even need multiple files
+00:10:09.720 for it I just need one file which I do
+00:10:11.560 optimally that is the use Cas that they
+00:10:13.600 picked and solved it properly but most
+00:10:15.640 of the use case that I am thinking of
+00:10:17.279 talking right and I have used are on
+00:10:19.880 high scale so most of them actually have
+00:10:23.680 uh single files for each of the table
+00:10:27.120 and also it has separate data data files
+00:10:29.720 and index files so what is the data
+00:10:31.399 files and data file and index file we
+00:10:33.000 will look into it little data but why do
+00:10:35.320 we really need to separate these two
+00:10:36.600 things I can even store both of them
+00:10:38.399 together right for a single table I can
+00:10:40.440 have a same data file same data in a
+00:10:43.000 same index and data in a same file why
+00:10:45.839 do we need to have two
+00:10:47.800 different any
+00:10:51.079 answers
+00:10:53.279 okay okay anything else
+00:11:02.959 exactly
+00:11:04.440 so you won't access every data right you
+00:11:08.680 have like maybe thousands millions of
+00:11:11.160 Records in your system you won't be
+00:11:13.720 accessing everything so let's assume
+00:11:16.040 that uh you index is simply like a
+00:11:19.639 registry in a hotel so I just need to
+00:11:23.560 know where my friend is staying in this
+00:11:25.279 hotel I go to the registry I look at it
+00:11:27.639 and then I say he's staying at room
+00:11:29.800 number 31 and that data can be casted
+00:11:33.360 and lot of people can come and then ask
+00:11:35.279 for the data if it is casted in O and it
+00:11:37.880 is smaller and if I store it separately
+00:11:41.000 then it solves a lot of problem for me
+00:11:43.160 but if I store it along with the data
+00:11:44.800 file then I have to read the whole data
+00:11:47.839 and then I have to leave out all the
+00:11:49.680 unnecessary things and then I have to F
+00:11:52.000 the actual data so that's a reason why
+00:11:53.880 database systems prefer to keep index
+00:11:55.760 files separately from data files uh
+00:11:58.360 moving to the next thing which is a data
+00:12:00.079 file uh I already said data files means
+00:12:02.680 it stores the data records which is
+00:12:04.519 basically your uh insert operation with
+00:12:07.680 the data saying that this is my name uh
+00:12:10.720 full name uh whatever right whatever
+00:12:13.880 table columns and then the rows that you
+00:12:15.720 have that data is sitting in a data file
+00:12:18.720 and there are okay okay and there are
+00:12:21.519 two major classifications of data files
+00:12:24.079 one is index organized and another one
+00:12:26.480 is Heap organized what are they why are
+00:12:29.360 they different uh so there is a reason
+00:12:32.079 there is a specific tradeoff that they
+00:12:33.639 have picked up and they have solved it
+00:12:35.560 one is index organized what does that
+00:12:37.399 mean index organized means they store
+00:12:39.440 the data along with the index you might
+00:12:42.440 think like hey you said something here
+00:12:44.279 you said like data files and index files
+00:12:46.680 stores separately because for the faster
+00:12:49.399 access blah blah blah but you said like
+00:12:51.880 here it stores together yeah that's true
+00:12:55.519 they Sol a different use case again the
+00:12:58.000 use case that they have solved here is
+00:13:00.959 they want to have a faster range quins
+00:13:03.399 if the data is getting stored together
+00:13:05.839 along with the index and if if you store
+00:13:09.480 the data along with the index I don't
+00:13:11.079 need to do a separate dis read if you
+00:13:14.440 look at this one right the heat poiz I
+00:13:16.800 have to go through this part I will go
+00:13:18.959 from here to here to here based on the
+00:13:21.639 query based on the particular key whever
+00:13:23.519 it exist on the de ro and from there I
+00:13:25.959 have to do another dis read to here that
+00:13:29.320 means at the two discrete form but if
+00:13:31.760 you look at this one I just have to do
+00:13:33.800 the same discrete I don't have to go to
+00:13:35.680 a different place to look for the data
+00:13:37.760 the data is already in the index but
+00:13:40.160 what is the problem with
+00:13:41.519 that can anyone
+00:13:47.240 explain because you need more such Pages
+00:13:51.240 because if I can have hundreds 100
+00:13:54.680 pointers in the single page here but I
+00:13:57.160 cannot have 100 pointers here because
+00:13:59.120 data is also reing I will only have 10
+00:14:01.040 pointers that means I will have more
+00:14:02.920 such deep notes then the
+00:14:06.079 disk the index seek will take more time
+00:14:09.720 but the disk seek will be less so that's
+00:14:12.199 a tradeoff that they have solved one
+00:14:13.680 more thing the sequential reads here all
+00:14:16.800 the leaf notes would be connected so if
+00:14:18.759 I have to do a range query I I would say
+00:14:20.920 like give me all the records between ID
+00:14:23.399 100 and ID 200 all of them will be
+00:14:25.759 sitting together from this side to this
+00:14:27.600 side so I can just go to a particular
+00:14:30.000 this pointer and then read everything
+00:14:32.639 from the pointer say like give me all
+00:14:34.720 the things and we all know that like uh
+00:14:37.199 dis works with the dis has a pointer or
+00:14:39.320 the what do they call needle which
+00:14:40.800 actually goes through the sector or the
+00:14:42.800 segment and and we all know that the
+00:14:46.639 sequential rights and sequential reads
+00:14:48.440 are much faster than the random RS and
+00:14:50.959 random reads so that is the thing that
+00:14:53.199 these guys have optimized for this guy
+00:14:56.199 is optimized for a better ins insertion
+00:14:59.600 so if you look at the insertion here
+00:15:01.160 right this one is written in a
+00:15:02.480 sequential manner so if I have to do a
+00:15:04.600 random right which sits in the middle of
+00:15:06.600 this thing I have to move everything in
+00:15:08.560 the middle to the left most or the right
+00:15:11.600 most to fit this particular guy then I
+00:15:14.199 have to do a lot of discribes whereas
+00:15:17.279 this guy will just have to do a single
+00:15:19.680 pointer insertion at any point you don't
+00:15:22.880 have to worry about where the data file
+00:15:24.440 is sitting you just have to worry about
+00:15:26.360 where I have to point this is really
+00:15:28.519 good for faster insertion but this is
+00:15:30.720 not good for range queries and better
+00:15:34.079 reads so this is the two different way
+00:15:36.240 of optimizing what use case that you
+00:15:38.800 have so every time you pick a use case
+00:15:41.319 you need to understand what my reads and
+00:15:44.040 wrs should be how I want my reads and
+00:15:46.680 rights to be whether I want a better
+00:15:48.440 latency for read whether I want a better
+00:15:50.240 latency for wrs those are two major
+00:15:52.720 things that you have to consider
+00:15:54.000 whenever you pick up any databases uh
+00:15:57.040 let's move to the next bit it will be
+00:15:59.079 will also be on the same line of this
+00:16:00.920 one uh the index phas I already talked
+00:16:03.560 about so if you go to the
+00:16:06.690 [Music]
+00:16:11.279 one that's a nice question so actually I
+00:16:14.360 think I thought of talking about it
+00:16:16.680 maybe in the later but I will talk about
+00:16:19.040 it now so how many of you have used
+00:16:23.120 posters how many of you know which one
+00:16:25.759 the posters do
+00:16:31.240 keep only and how many of you have used
+00:16:35.600 MySQL most of you and MySQL do the first
+00:16:39.959 thing so we all know that like okay
+00:16:42.959 MySQL post both of them SQL databases
+00:16:46.040 what is the big thing I will just use
+00:16:48.199 one over the other whichever use case I
+00:16:50.079 get I will just use my SQL because I
+00:16:52.000 know my SQL better that's what I have
+00:16:54.759 done for post I learned my lessons uh I
+00:16:58.440 I have I'm a very big fan of post and I
+00:17:01.399 have used post for one of the usec which
+00:17:03.160 I will talk about later where I have
+00:17:05.280 burned my own hands and found that post
+00:17:07.919 is not a good fit for that particular
+00:17:09.760 use case uh so I thanks for the
+00:17:14.079 question so in index organized tables
+00:17:16.760 everything is brought up to the memory
+00:17:18.240 and from the memory only the are which
+00:17:21.160 one for either case index file it Mak
+00:17:26.039 the data files are the dis so it's Mak
+00:17:30.039 for the yeah whereas in index organized
+00:17:32.320 table doesn't it bring it from the dis
+00:17:35.080 to the memory when it is loading the
+00:17:36.960 index itself yeah it will all this
+00:17:39.640 internal nodes will be cached and even
+00:17:43.000 if you do this right if you go through
+00:17:45.039 the disk OS way of doing it every
+00:17:47.679 discreate will go to the OS cach and
+00:17:50.320 then only from the kernel cach it will
+00:17:52.360 go to the user cach and from there it
+00:17:53.960 will come to your whatever application
+00:17:56.280 that you're using so yes it will go
+00:17:58.240 through the in memory
+00:18:01.280 flow cool any other questions on this so
+00:18:04.600 far the data files cool uh the next one
+00:18:08.159 the index FES I already said that why do
+00:18:09.840 we need an index it is for
+00:18:12.400 faster uh select and it also gives you a
+00:18:16.919 easier way to locate a record in the
+00:18:18.440 data and just like I said like I can't
+00:18:20.919 go to every room and knock and then see
+00:18:23.679 whether it's my friend or not okay that
+00:18:25.360 will be very inefficient right but if I
+00:18:27.880 know the registry is that and if I can
+00:18:29.679 look at the regist and regist say like
+00:18:31.559 he's staying at 31 I don't have to worry
+00:18:34.360 about knocking every door I just go to
+00:18:36.120 the 31 and then knock him and then B so
+00:18:39.320 yeah uh that's the whole reason why do
+00:18:42.120 we need an index and there are two types
+00:18:43.880 of index again I said clustered index
+00:18:45.520 and non-clustered index and they map to
+00:18:48.400 these two things again so the cluster
+00:18:50.240 index is similar to the index organiz
+00:18:51.880 table and non-cluster index is similar
+00:18:53.679 to the index F thing uh so the basic
+00:18:56.400 difference here is in clustered index
+00:18:58.919 when you save a data data is getting
+00:19:01.520 stored in a sorted order so if you have
+00:19:03.840 an index and that index is in some
+00:19:06.960 integer or some some integer right and
+00:19:10.000 if you have if you WR 1 to 10 and if you
+00:19:12.840 are writing something like file again so
+00:19:16.760 it will come back to the middle of it
+00:19:18.679 and it will update the file okay so when
+00:19:21.320 it updates a file in the middle up it
+00:19:23.280 has to move everything to the top or
+00:19:25.520 bottom it has either do arithmetic left
+00:19:27.400 or arithmetic right kind of thing
+00:19:29.280 uh so that's a bigger problem with the
+00:19:31.080 cluster index but it again gives you a
+00:19:33.760 better range queries and it again gives
+00:19:36.480 you a better reads whereas non-cluster
+00:19:39.039 index it is good for better rights uh
+00:19:42.760 again going to the next thing okay let's
+00:19:45.440 get to the next fundamentals of
+00:19:47.080 databases can you name some data
+00:19:49.280 structures that you know that the
+00:19:52.280 databases are using and the data sectes
+00:19:54.840 are powering the databases
+00:19:59.559 in
+00:20:02.760 okay ashing what
+00:20:07.039 isse maybe for Hep we can use the
+00:20:10.120 priority
+00:20:11.280 queue
+00:20:15.120 okay binary Cy
+00:20:18.240 okay anything
+00:20:22.559 else cool uh let's go to I think there
+00:20:26.200 are few things which are unanswered in
+00:20:28.240 this thing I have some surprise for you
+00:20:30.919 uh let's go to the next one this is
+00:20:33.440 basically not a data structure but it's
+00:20:35.200 a really important feature which is
+00:20:38.440 being implemented in all the databases I
+00:20:40.840 think most of the databases at least so
+00:20:42.880 what is a Val Val means right ahead
+00:20:45.120 loging uh what is right ahead loging
+00:20:48.000 it's basically up and only file uh
+00:20:50.520 whenever a database writes a right or
+00:20:54.320 right means like it can include both
+00:20:55.799 insert and update whenever database do
+00:20:57.960 or right that that means it is changing
+00:20:59.400 a state right from State one to state
+00:21:01.760 two and what is the biggest thing in
+00:21:03.640 database the asset principles right
+00:21:06.640 stands for durability the moment the
+00:21:09.159 database says like hey I have your data
+00:21:11.520 saved that means the data has to be
+00:21:13.840 there in the system whenever I come back
+00:21:16.480 even it goes to enormous amount of
+00:21:18.720 recovery and failures it has to have the
+00:21:21.600 data so this is a big
+00:21:24.559 okay okay sorry I press the wrong button
+00:21:27.600 so this is a bigger thing that powers
+00:21:30.039 that particular feature so what is a Val
+00:21:32.880 again coming back to it Val is basically
+00:21:35.000 up and only file so up and only file you
+00:21:38.120 you all I think most of you would have
+00:21:41.039 uh done this work right doing opening a
+00:21:43.880 file with the particular mode read mode
+00:21:46.679 write Moree and up and mode okay that's
+00:21:48.559 basically this opening a file in up and
+00:21:50.840 mode what is the big thing with that
+00:21:52.640 when you open a file with app and mode
+00:21:54.880 you don't get to edit anything in the
+00:21:58.120 file you can only up and to the bottom
+00:22:00.880 what does that mean that means you can
+00:22:02.559 do only sequential rights there is no
+00:22:05.200 way you can do any random rights in the
+00:22:07.279 file so why does it matter because again
+00:22:10.279 sequential rights are much faster in
+00:22:12.400 this than random rights
+00:22:15.039 uh again how does the Val work Val
+00:22:18.840 whenever you write a particular entry to
+00:22:21.320 the database it gets added to the Val
+00:22:24.039 first and Val records are flush to the
+00:22:26.240 data flush to the disk irresp itive of
+00:22:29.440 how much time it happens okay whereas
+00:22:31.960 your rights will not be fleshed to the
+00:22:33.679 dis every time it depends you can set a
+00:22:35.960 configuration to do it but vales are
+00:22:38.400 always plus to dis for every right it is
+00:22:40.960 not efficient but it has to be done for
+00:22:42.799 the durability so why do we need to do
+00:22:44.960 that against for the data integrity and
+00:22:46.799 the durability the moment the database
+00:22:48.600 says that I got your request that means
+00:22:50.799 the request has to be there so how does
+00:22:53.640 it work so when database crashes it
+00:22:56.360 comes back it reads A Val it won't read
+00:22:59.120 anything else it first goes to the Val
+00:23:00.799 file check like is there any uncommitted
+00:23:03.120 data for me if it is not uncommitted if
+00:23:06.159 it is uncommitted then I will take it
+00:23:08.559 and will try to redo the operation if it
+00:23:11.720 is one committed then I will go from
+00:23:14.080 this state to the other state say that
+00:23:15.840 like I am available for the further
+00:23:17.720 processing or else I will keep on
+00:23:19.480 processing the data so that's the whole
+00:23:21.520 point of having a Val and again I said
+00:23:24.799 it do it is most important for recovery
+00:23:27.840 process and again you all have that
+00:23:30.679 question if I write everything twice to
+00:23:33.200 the Val and then to the actual data file
+00:23:36.000 will it be using will he be using more
+00:23:37.880 dis yes honestly yes so that's why Val
+00:23:41.320 will be ared once the changes are
+00:23:43.720 committed so it will have a checkpoint
+00:23:45.760 once the changes are committed
+00:23:47.600 periodically it will remove unnecessary
+00:23:49.640 data it only keeps the valid data which
+00:23:52.240 it needs for the next recovery cycle so
+00:23:55.679 moving to the next data SE is there any
+00:23:57.720 questions on this one so
+00:23:59.880 far on Val why do we need it how is it
+00:24:03.159 being implemented yeah uh so do we have
+00:24:06.039 any diagram for this like to visualize
+00:24:09.080 better uh actually on the B I don't have
+00:24:11.799 but for the other data structures I have
+00:24:13.440 but it's because basically a file system
+00:24:16.039 with up only thing uh I can have a
+00:24:19.880 picture for it but it will not be a huge
+00:24:22.120 picture uh maybe I will try to find
+00:24:25.360 something and share it
+00:24:27.120 later yeah share it on LinkedIn yeah
+00:24:30.279 yeah I think um there is a documentation
+00:24:33.159 by post if you just search Val internals
+00:24:35.799 right post has a really good
+00:24:37.440 documentation on B uh you can read about
+00:24:40.440 it uh but yeah I will share about it in
+00:24:43.440 my LinkedIn cool so moving to the next
+00:24:47.159 thing which is BR
+00:24:49.240 B this is ax pattern iing okay if you
+00:24:53.039 find it I'm happy uh so I think some of
+00:24:55.919 you have talked about it yes B3 is one
+00:24:58.600 of the very widely used data structure
+00:25:00.960 in databases uh what is a v tree how
+00:25:03.799 does it differ from the binary sear tree
+00:25:05.760 so V Tre is basically a generalization
+00:25:08.159 of binary or version of the binary
+00:25:10.679 search tree uh which can have more than
+00:25:13.440 two children if you look at it it can
+00:25:15.679 have multiple children and uh it's self
+00:25:19.159 balancing that means that I don't have
+00:25:21.120 to worry about the insertion order any
+00:25:23.000 order I can insert it will get into the
+00:25:25.679 balance state so that any of my further
+00:25:28.320 inserts or updates or deletes or a
+00:25:30.760 select everything will be o of login uh
+00:25:34.279 that's the biggest uh biggest thing with
+00:25:37.240 the B+ tree and anyone have any idea why
+00:25:40.919 b+3 is very popular why not any other
+00:25:43.000 tree why not rbl
+00:25:45.279 tree R some
+00:25:47.720 other
+00:25:51.760 please why is it so popular
+00:26:06.640 okay yeah
+00:26:14.120 one but you have to get into the leap
+00:26:16.440 for that
+00:26:19.039 right but you can do the same in other
+00:26:22.159 uh binary search right like I'm saying
+00:26:25.480 like even there is a big difference
+00:26:27.760 between and B plus3 I forgot to talk
+00:26:29.880 about it thanks for finding it out so
+00:26:31.640 the big difference with b and b+3 is
+00:26:33.600 that in B trees you can have records in
+00:26:35.919 the middle of the nodes middle of the
+00:26:38.799 tree that means even this nodes can have
+00:26:42.720 data records whereas on b+3 only the
+00:26:45.520 replot can have the data records and
+00:26:47.760 then the all the internal things are
+00:26:49.679 just
+00:26:50.600 pointers and another major thing in B+ C
+00:26:53.799 all the leaf notes are connected so that
+00:26:55.960 any of the sequential operation that you
+00:26:57.799 do it will be much faster because I
+00:26:59.840 don't have to go from here to here and
+00:27:01.600 here I can just do 5 7 11 12 15 16 19 20
+00:27:06.360 in a sequential order I don't have to
+00:27:08.039 worry about any of the random jumps that
+00:27:11.080 I have to do that's the difference
+00:27:12.480 between B and B plus G but yeah that's a
+00:27:15.080 difference that's the reason why B plus3
+00:27:16.880 is popular but why even the
+00:27:25.120 B3 any idea
+00:27:31.760 no rebalancing is that rebalancing is
+00:27:33.520 one important thing of B3 which is why
+00:27:36.080 it is also being used but what are the
+00:27:38.240 other reasons any other reason that you
+00:27:40.120 feel like that could be the reason why
+00:27:42.519 it is
+00:27:45.080 that any guesses I can wait for some for
+00:27:48.960 faster
+00:27:49.919 access okay but you can also do that in
+00:27:53.320 other SE right
+00:28:00.360 that is self
+00:28:01.480 balancing that point is already covered
+00:28:03.960 like you get a self balancing that makes
+00:28:05.559 sure that the time complexity BL there
+00:28:07.760 are other self balancing trees right why
+00:28:10.960 not that over
+00:28:16.320 this okay that is the self balancing
+00:28:19.799 again everything is talking related to
+00:28:21.960 self balance
+00:28:25.640 right no idea okay good I I will go so
+00:28:29.360 self balancing s it is the first major
+00:28:31.919 reason why it is being used but there
+00:28:33.960 are other reasons also you won't see the
+00:28:36.880 B is being used on in in memory
+00:28:39.000 structure right you hardly see that it
+00:28:42.120 is very optimized for dis Bas storage
+00:28:45.159 the reason is that every node here it
+00:28:48.640 can be a page in OS it can just be a
+00:28:52.360 page in O and I can just cat all the
+00:28:55.039 internal nodes for any access I do it is
+00:28:58.440 just over one access dis access because
+00:29:01.679 everything else is already sitting in
+00:29:03.159 memory I can just cash all the internal
+00:29:06.799 notes of the B3 or b+3 and only the leaf
+00:29:11.240 note has to be thisse that means it's
+00:29:13.760 just the over this for me it is highly
+00:29:16.320 optimized for dis space thing where I
+00:29:18.679 can have a better read
+00:29:21.799 latency and again the flexible node
+00:29:24.640 structure when you look at this this
+00:29:27.000 number how many branching that it can
+00:29:29.240 have you can Define it if you feel like
+00:29:31.840 I need a better branching Factor you can
+00:29:34.399 do that I need a small smaller branching
+00:29:36.840 Factor you can do that whereas on binary
+00:29:38.960 search it's always to right uh again
+00:29:43.279 going back to the okay uh and it
+00:29:46.919 supports a range query like someone said
+00:29:49.640 I can go to the leaf node I can Traverse
+00:29:51.720 the whole thing uh those are the major
+00:29:54.399 reasons why I feel like B+ 3 is much
+00:29:56.960 widely used in the industry there are
+00:29:58.640 few other things where like it's like a
+00:30:00.640 Java uh it is there it is being used it
+00:30:03.640 is production tested and it is running I
+00:30:06.120 will continue with it uh so yeah I don't
+00:30:09.640 like Java so loes I have one doubt yeah
+00:30:14.399 yeah so you said that uh this stores it
+00:30:18.240 node in in memory right yeah so let's
+00:30:21.480 say we have data of 100 GB and it's my
+00:30:24.640 uh no it doesn't store the records in in
+00:30:27.200 memory it actually caches the internal
+00:30:30.440 thing in memory all okay wait is the so
+00:30:34.080 if you look at this this 20 or all of
+00:30:37.360 this thing it is sitting in disk but it
+00:30:40.799 is cached by OS page so when you do a
+00:30:44.120 seek it doesn't have to do a dis seek it
+00:30:46.880 is already available in memory because
+00:30:48.840 it is cashed by the O so it don't have
+00:30:51.440 to do a dis seek it is already available
+00:30:53.440 in memory but it is also there in disk
+00:30:56.440 so whenever you do a write the OS will
+00:30:59.279 flush the inmemory page to the
+00:31:03.360 dis uh did I answer your question so
+00:31:06.159 specifically what it actually cashes
+00:31:08.600 like uh the the record or just an hash
+00:31:12.120 value of that no the whole page itself
+00:31:15.000 will be cached like if you look at this
+00:31:16.639 structure right if you look at this
+00:31:19.200 structure this whole 20 this bar or this
+00:31:22.639 particular node this particular node
+00:31:25.039 even this can be cached anything cash me
+00:31:27.399 cash right like it's a OS which takes
+00:31:29.000 the decision for OS it doesn't matter
+00:31:30.840 it's a B3 node or something else it's
+00:31:32.840 just a disk page I have to I'm be like
+00:31:36.360 consistently being called for
+00:31:39.080 consistently being fed for so I will
+00:31:41.360 cash it so that I am having a hypothesis
+00:31:43.919 that it would be used in further calls
+00:31:46.399 also so it's say A O
+00:31:49.919 optimization did I answer your question
+00:31:52.880 yeah okay I will read about more yeah
+00:31:56.159 yeah uh moving to the next one uh which
+00:31:59.399 is LSM tree this is how many of you know
+00:32:02.919 about one okay I have a really
+00:32:06.480 interesting thing to talk about so this
+00:32:08.880 is one of my favorite data structure I
+00:32:11.240 got to know about it in candra I I think
+00:32:15.120 we were using Cassandra a lot in my
+00:32:18.000 previous project so Cassandra was using
+00:32:20.399 LSM tree uh that's how I got to know
+00:32:22.960 about LSM Tre but let's understand how
+00:32:25.600 LSM Tre works because whenever I read
+00:32:27.559 this you will all be like I don't
+00:32:29.519 understand anything I will get into the
+00:32:31.000 image part so whenever a Right comes to
+00:32:33.919 NS SMP right this is how it works so it
+00:32:36.279 goes to the Val to make it it is
+00:32:38.679 persistent it is durable so it writes to
+00:32:41.240 the Val it to make sure that it is
+00:32:43.919 persistent and it write to a m table M
+00:32:46.919 table by the name of it it means it is
+00:32:49.200 in memory so it have in memory structure
+00:32:52.960 which holds the ratest inserts and
+00:32:56.240 that's all whenever you write thing it
+00:32:58.600 just writes to the memory and it's
+00:33:00.600 persisted through the Val nothing else
+00:33:02.960 so that's why this is much much more
+00:33:05.039 optimized for WR based workloads so you
+00:33:08.679 because you're just doing one dis right
+00:33:10.760 no index updates nothing just dis right
+00:33:14.200 and I'm writing to in memory you can ask
+00:33:16.039 me like how does it work what if my
+00:33:19.200 system
+00:33:20.080 crashes how does it actually persist the
+00:33:22.760 data that's where the background process
+00:33:25.120 comes from the picture so whenever this
+00:33:27.200 m table
+00:33:28.480 there are multiple parameters again
+00:33:30.399 there are time based flushing or then
+00:33:32.480 there are size based flushing so moment
+00:33:34.440 it reaches some defined size maybe like
+00:33:38.279 100 MB 200 MB it flushes it to a dis and
+00:33:43.679 the structure that it flushes is called
+00:33:46.760 sted Sing string table SS table so stter
+00:33:50.760 string table by the name of it it is in
+00:33:53.080 a sorted order why because it's an
+00:33:56.080 immutable thing I will not and update
+00:33:58.559 anything and it is in a sorter Manner
+00:34:01.200 and it's again good for range queries
+00:34:03.440 just like how we have seen for the
+00:34:04.760 cluster Index right if it is a sorted
+00:34:07.200 manner my range queries will be much
+00:34:10.320 faster so same thing here SS table I
+00:34:13.679 will flush it but when I flush it I will
+00:34:16.119 keep it in a sorted manner but when I
+00:34:18.040 write it here it's a in memory structure
+00:34:20.159 I don't have to keep it in a sorted
+00:34:21.440 manner even in my in memory strcture
+00:34:23.520 keeping it sorted will not be as hard in
+00:34:26.839 terms of latency and throw as keeping it
+00:34:29.560 in disk because you know the napkin math
+00:34:33.280 right in Ram access in nanometer Nan
+00:34:38.280 whereas the dis access is in a
+00:34:39.679 millisecond or micros sorry uh micro or
+00:34:43.520 M microc yeah uh so even if you do
+00:34:47.679 sorting on the memory it will be much
+00:34:49.839 much more faster than sorting in a dis
+00:34:52.760 so whenever they flush it they keep it
+00:34:54.918 sorted and they also keep the uh unique
+00:34:58.760 data and write it to SS table now you
+00:35:01.320 can ask me what if I have multiple
+00:35:03.680 entries for a same key okay because one
+00:35:07.880 first time when I write to a m table
+00:35:10.160 let's assume that it's a first M table
+00:35:12.000 one okay it has ID for flage okay and I
+00:35:17.599 come back after a hour I write it again
+00:35:20.520 I have a new record I write it again the
+00:35:22.880 new records again goes to a different SS
+00:35:25.480 table okay how does that table knows
+00:35:28.599 that I have to actually check with this
+00:35:30.520 also so that's where the level comes
+00:35:32.839 into the picture and that's where the
+00:35:34.480 compaction also comes into the picture
+00:35:36.400 so the levels if you look at this it is
+00:35:38.960 ordered in the oldest to the newest so
+00:35:41.760 from the top it is newest and to the
+00:35:44.280 bottom it is oldest so I want the latest
+00:35:47.079 record I will go through this
+00:35:48.640 hierarchical order I will always check
+00:35:51.000 the inmemory structure which is the
+00:35:52.960 latest one that I have so anyone who
+00:35:55.680 have written it will be stor in the
+00:35:57.079 inory so I will write it to the in
+00:35:59.160 memory I will first check the in memory
+00:36:00.880 structure once it is not there I will go
+00:36:03.560 to the next level which is level zero I
+00:36:05.920 will check all the SS tables in the
+00:36:07.520 level zero in the order which is written
+00:36:10.200 and then I will go to the level one if
+00:36:12.000 it is not there again I go to the level
+00:36:13.800 two it is not there again I will keep on
+00:36:15.960 retray it till I reach the end of it
+00:36:18.839 that's how the read Works in LSM you can
+00:36:21.280 yeah I think from the looks of it you
+00:36:22.760 know like it's very inefficient yes it
+00:36:24.480 is inefficient for reads there are
+00:36:26.200 optimizations which are done on top of
+00:36:27.800 it like Bloom filters and having a
+00:36:29.880 separate index for it but it's a topic
+00:36:31.960 for a different
+00:36:43.680 day so I have to
+00:36:47.800 yeah okay thanks for finding that out so
+00:36:51.079 that's why the next Cas is what will
+00:36:53.359 happen when I do multiple updates for
+00:36:56.280 the same key and I have a key for locate
+00:36:58.960 and I keep on updating the record again
+00:37:01.200 and again and again that means on Ln to
+00:37:05.480 the l0 I will have key for location
+00:37:07.760 different files right so the key will be
+00:37:10.920 from here to here but the latest one in
+00:37:13.680 me table is a is going to be the one
+00:37:15.760 that I need all the other things are
+00:37:17.560 dead records which I have to clean up
+00:37:19.839 right then that's where the compassion
+00:37:22.359 comes into the picture that's where the
+00:37:24.200 merge also comes into the picture so
+00:37:26.920 let's look at the the name of it it is
+00:37:28.520 log structured merrye the log that means
+00:37:32.079 it is up and only so whatever I write
+00:37:35.160 here it's kind of immutable it's like a
+00:37:37.599 lock I will up I will just keep it I
+00:37:39.960 will not touch it even if I have to
+00:37:41.680 update it I will write it here I will
+00:37:43.800 write it in new file I will not write
+00:37:45.760 the old file there is no in place update
+00:37:48.400 there is only a delete and insert okay
+00:37:52.200 so I insert a new file and I delete the
+00:37:54.800 old records so when I delete the old old
+00:37:57.720 records I have to remove the old values
+00:37:59.760 also right or else I will be just having
+00:38:02.000 lots and lots of older data which I
+00:38:05.280 don't need and I will be using
+00:38:07.359 unnecessary dis for it so that's where
+00:38:09.960 the compaction comes into the picture
+00:38:11.560 that's where the merge s also comes in
+00:38:13.680 the picture all of you at least know the
+00:38:15.920 merge right how it work it takes two
+00:38:18.400 things compar first one first one merge
+00:38:20.440 it second one second one merge it and it
+00:38:22.800 create the newer sorted thing right so
+00:38:26.520 that's how it also works so it takes two
+00:38:32.319 level sorry yeah I will finish this yeah
+00:38:35.760 so if you look at this one there is a in
+00:38:39.280 level zero there are two sort of tables
+00:38:41.680 one has key1 key2 key3 and same 1 two 4
+00:38:45.240 when I merge it I compare this one and
+00:38:47.040 this one and I know which one is the
+00:38:48.720 latest based on the metadata that I have
+00:38:51.119 and I take the latest value here and I
+00:38:53.200 will drop the oldest value how will I
+00:38:55.280 drop it I will not drop particular
+00:38:57.560 record I will drop the whole file so
+00:38:59.960 even if you look at this I take the key
+00:39:02.400 one one from the second table and key
+00:39:06.119 one2 from the second table key 13 from
+00:39:08.400 the first table key4 from the second
+00:39:10.240 table I drop both this table I won't
+00:39:12.960 drop particular part of it I drop both
+00:39:15.359 of it so now I have a new table which is
+00:39:19.040 a merged version of the both older
+00:39:21.240 tables which has only the latest records
+00:39:24.560 or only the unique records
+00:39:28.000 and that's how the leveling works so
+00:39:30.960 level Zero Records are merged and moved
+00:39:33.720 to level one level one records are
+00:39:35.880 mosted and move to level two level two
+00:39:37.800 records are mered and move to level
+00:39:39.599 three four five like that there are
+00:39:42.240 other algorithms for it this is level
+00:39:44.560 based that is size based that is time
+00:39:46.839 based uh and each of it has it own perks
+00:39:49.640 but let's not get into it in this
+00:39:52.079 particular session because it is a very
+00:39:54.240 different tangent to the to what I
+00:39:56.319 wanted to cover uh so I think that's on
+00:40:00.800 the okay coming back to the actual test
+00:40:03.480 I want to dra so loog seure most three
+00:40:06.280 it stores data in hierarchical structure
+00:40:08.520 like we see M table level zero level one
+00:40:11.319 level n and it is optimize for both
+00:40:14.200 reach and right how is it optimized for
+00:40:16.000 reach and right you said like re s right
+00:40:18.319 because you have in memory structure if
+00:40:20.880 I write and read from it at the moment
+00:40:23.720 the right is already in the in
+00:40:26.319 memory so the possibility of me going to
+00:40:30.319 the level n will be very less it's
+00:40:32.640 amortized thing okay uh again coming
+00:40:36.560 back to it leverage both in memory and
+00:40:38.520 display storage that's why it is
+00:40:40.160 optimized for both reach and rights
+00:40:42.040 still I don't agree to the Deep thing
+00:40:44.000 but yeah it's really good for rights uh
+00:40:46.960 optimize for right heavy because it
+00:40:49.480 every right it is
+00:40:52.480 just every right it is just getting
+00:40:54.800 stored to the memory nothing going out
+00:40:57.079 of that only one dis right which is on
+00:41:01.040 the Val which you do anyways
+00:41:03.000 irrespective of it is B tree or LSM tree
+00:41:05.560 which is there and as part of the LSM
+00:41:07.640 tree there is no right here there is a
+00:41:10.119 right behind the seene so For Your Right
+00:41:12.839 operation it is in a latency of
+00:41:16.079 milliseconds because maybe even better
+00:41:19.240 or one digit millisecond whereas on B
+00:41:21.640 trees it will be two digit milliseconds
+00:41:24.040 uh that really matters in High skin
+00:41:26.079 system
+00:41:28.280 getting to the questionaries before
+00:41:30.119 moving to here you have any questions on
+00:41:32.760 LSM before I move to the
+00:41:35.200 comparison the
+00:41:39.720 compaction so does that happen in the
+00:41:41.839 backround or when you make it happens
+00:41:44.079 back all this flush as well as the
+00:41:46.800 compaction both are async so it happens
+00:41:49.599 periodically based on some of the
+00:41:51.400 parameters that you configure you can
+00:41:53.079 say flush it every 15 minutes or say
+00:41:55.960 flush it every 100 MBS or something like
+00:41:59.599 that similarly compassion you can say FL
+00:42:02.040 it when the dead records are more than
+00:42:04.079 this percentage or FL it once every 30
+00:42:06.880 minutes you can there are multiple
+00:42:08.839 configurations provided by different
+00:42:10.280 databases based on their needs again but
+00:42:13.160 two question yes it's not synchronous
+00:42:16.560 that means this part is only the the
+00:42:18.960 right to M table is what you have to
+00:42:21.000 worry about all this part is taken care
+00:42:23.599 by the database behind the scene yes my
+00:42:26.000 actual question was when I do the mer s
+00:42:28.800 so I do an l0 and L1 yeah it does it go
+00:42:33.160 back to the L1 l0 or l so I merge all
+00:42:37.200 the records on l0 move it to
+00:42:39.680 L1 I merge all the records of L1 move it
+00:42:42.720 to
+00:42:48.800 L3
+00:42:51.839 yeah any other questions
+00:42:58.720 so supp
+00:43:02.079 the I not
+00:43:04.400 ask suppose it crashes I have to go
+00:43:07.640 through all the SS tables and look at
+00:43:10.119 the Val and that's how I reconstruct
+00:43:12.319 right
+00:43:13.559 or you don't need to okay I think
+00:43:16.520 reiterating the question for the people
+00:43:17.880 in
+00:43:18.680 Zoom has asked a question like how does
+00:43:20.839 a recovery work in LSM Tre uh so in LSM
+00:43:24.880 Tre what will actually be missing when
+00:43:28.559 the uh when the system crash only the
+00:43:31.119 inmemory thing will be missing right yes
+00:43:32.960 you don't have to worry about any of
+00:43:34.200 this because it is already
+00:43:36.160 immutable that records are already
+00:43:38.160 persistent I don't even have to worry
+00:43:40.040 about all these things I just have to
+00:43:41.760 worry about the M table so I will have
+00:43:44.119 all the records that I have inserted to
+00:43:45.960 M table there is a checkpoint on the Val
+00:43:49.119 saying that from this point I haven't
+00:43:50.720 committed I haven't pushed to the flush
+00:43:52.720 to the disk so from that point I will
+00:43:55.599 write it again all of them back to the m
+00:43:57.960 table and I will leave it to the
+00:44:00.240 flushing mechanism to take care of the
+00:44:02.119 rest so it will get back to the state it
+00:44:05.160 was before when the recover when the
+00:44:08.559 crash
+00:44:09.839 happens did I answer question any other
+00:44:12.760 question for the people who are in the
+00:44:18.480 Mee in this there is no uh okay again
+00:44:22.640 reting the reiterating for the people
+00:44:25.240 who are in the call and the question is
+00:44:27.880 like is there any index in this LSM how
+00:44:30.839 does it work one thing for the M table
+00:44:33.400 it is already in a sorted thing that is
+00:44:35.240 a data structure called skip list uh you
+00:44:37.480 can read about it that's how the most of
+00:44:39.839 the databases actually implement this
+00:44:41.640 thing it is started in the way it is
+00:44:43.800 already so it's kind of index for the M
+00:44:46.160 table for the SS tables most of the
+00:44:49.599 implementations have optimizations on
+00:44:52.680 top of it some of them have index files
+00:44:55.559 for each of the SS table for each SS
+00:44:57.960 table there will be index file also so
+00:44:59.960 that you can just check the index file
+00:45:02.119 just to make sure that whether the
+00:45:03.880 record is there or not and there are
+00:45:06.240 even better implementations like Bloom
+00:45:08.480 filters uh for people who don't know
+00:45:11.160 what is Bloom filter Bloom filter is
+00:45:13.240 basically a probabilistic data structure
+00:45:15.480 which gives you a probability saying
+00:45:17.359 that this record can be presented it
+00:45:20.440 cannot guarantee you that this will be
+00:45:23.280 this will not be there so the
+00:45:25.000 probability is always on the
+00:45:27.960 positive side so it will have false
+00:45:30.599 positive but it will not have false
+00:45:32.760 negative false negative means it can it
+00:45:35.200 will never say that whe When the record
+00:45:37.720 is there it will never say it is not
+00:45:39.520 there but it will always say when the
+00:45:41.720 record is not there it is there that
+00:45:44.240 means it can say false positive the one
+00:45:48.520 headache is that you will go to the SS
+00:45:50.240 table with the empty hand saying that
+00:45:52.480 there is no such Rec I went into it I
+00:45:54.880 read the whole SS table but there is no
+00:45:57.000 but that is fine but there is a positive
+00:45:59.000 side to it because the probability data
+00:46:01.040 structures will just take very small
+00:46:02.920 bites compared to the whole index
+00:46:05.280 because I will not hold the whole data I
+00:46:07.839 will just hold the probability uh it's a
+00:46:10.119 different conversation for it but look
+00:46:12.160 into bloom filters for such thing those
+00:46:13.960 are the optimizations which are done uh
+00:46:16.440 so if you look at the this slide most of
+00:46:20.040 these things apach candra Rock TV I
+00:46:22.599 think even TV I have seen Bloom filters
+00:46:26.079 for each of them
+00:46:27.599 uh so let's get
+00:46:35.040 back so getting back to the differences
+00:46:39.440 when to use LSM when to use V3 I think
+00:46:42.520 these are like kind of already bolded
+00:46:45.440 for you to read but I am reiterating it
+00:46:48.559 LSM is known for right in intensive
+00:46:51.599 workloads uh where the where you have to
+00:46:54.000 store a large amount of data and you are
+00:46:55.960 using disc and
+00:46:57.480 drives uh whereas a B3 it is a
+00:46:59.839 traditional interesting structure which
+00:47:01.319 is there for a very long time and it is
+00:47:03.480 very very good for reads because you are
+00:47:06.920 just doing a direct access whereas on
+00:47:10.119 LSM you have to do multiple SS table
+00:47:13.640 query to make sure that particular
+00:47:15.200 record is there or not it's amortized
+00:47:17.160 thing it is all not it will not give you
+00:47:19.319 o of login kind of a thing similarly for
+00:47:21.680 right flow like I said it is a inmemory
+00:47:24.440 right it will much more faster similarly
+00:47:27.480 it's an up andon structure it uses the
+00:47:31.040 um sequential right so it will be much
+00:47:33.720 more faster and when to use what uh lsm3
+00:47:38.280 are mostly used when you have a large
+00:47:40.319 amount of data and it's a right heavy
+00:47:42.280 system okay like such as time serious
+00:47:45.040 databases uh whereas the read intensive
+00:47:47.400 workload with a very small to medium
+00:47:49.680 data sizes and it's a relational thing
+00:47:52.599 uh it is much better to use uh LSM uh
+00:47:56.319 let me this guy okay good moving to the
+00:48:00.400 next yeah loish I have one yeah yeah
+00:48:03.559 please yeah so uh so LSM trees are
+00:48:08.119 implemented for altp database and the
+00:48:12.520 data varable type database are using B+
+00:48:16.920 stre you can you can classify it I don't
+00:48:20.480 know the exact thing because sometimes
+00:48:23.400 people also use it the other way around
+00:48:25.440 basically his question is that like is
+00:48:27.280 B3 meant for oltp workloads which is
+00:48:30.520 transactional workload whereas LSM is
+00:48:33.720 meant for analytical workloads yes
+00:48:37.200 kind I said I said it reverse like thep
+00:48:41.160 is made for L LSM trees or
+00:48:44.720 no
+00:48:47.319 o yeah go ahead yeah can you show the
+00:48:50.440 difference slide yeah I think if you
+00:48:53.079 look at this slide right whatever they
+00:48:55.559 seeing the post SQL these are oil TP
+00:48:58.880 data stores whereas the other side that
+00:49:01.040 you have I think Cassandra I won't
+00:49:03.920 classify it as oil AP uh it's a white
+00:49:06.960 column store uh apach has space yeah
+00:49:10.000 kind of and influx is also a Time
+00:49:12.760 serious yes it's a oap rock CP is a key
+00:49:15.720 value store but all of these guys are
+00:49:17.599 using LSM uh there are like typical LSM
+00:49:22.000 implementation for oap which are
+00:49:24.079 columnar also which is what I would
+00:49:26.000 classify as pure oap uh like pinot and
+00:49:29.920 other things they have a different
+00:49:31.440 implementation of it but more or less on
+00:49:33.640 the LSM thing yeah so databases like
+00:49:37.200 Google big query and the graph T be like
+00:49:39.599 new forg so do they internally Implement
+00:49:44.400 B um I I remember reading that big
+00:49:49.440 queries is on LSM if I'm not wrong I
+00:49:53.160 have to reindex my own index uh I don't
+00:49:57.240 know uh maybe I have to Google it but
+00:50:02.480 uh uh actually LSM is for heavy right
+00:50:06.240 workers right yes and big query is for
+00:50:09.119 analytical purpose yeah as for my
+00:50:12.040 understanding so it should be B No it
+00:50:15.000 should be LSM like like you said right
+00:50:17.200 you said everything the last word is the
+00:50:19.599 opposite of it right like if it is
+00:50:21.520 analytical thing uh you do lot of wrs
+00:50:24.880 more than reads because you dump a lot
+00:50:27.359 of data and you do analytics on top of
+00:50:29.760 it how often you do analytics queries
+00:50:32.119 but you write tons of tons of data to it
+00:50:34.440 right so it's right heavy more than read
+00:50:36.599 see even for us we use Cassandra for one
+00:50:40.000 of the analytical use case in the
+00:50:42.760 project that I was in uh so it is the
+00:50:46.200 LSM is meant more on the analytical side
+00:50:49.599 uh you can I think there are
+00:50:50.839 implementation that also provides if you
+00:50:52.559 look at gab TV right it's basically a uh
+00:50:55.920 distributed database so it also supports
+00:50:59.319 o TP so that's why I won't classify
+00:51:03.079 these things to the O TP and O AP World
+00:51:05.839 because that classification is
+00:51:07.160 completely for a different site it's on
+00:51:09.480 the access level whereas this one is on
+00:51:11.720 the implementation
+00:51:14.280 level okay yeah
+00:51:17.559 goodh moving to the next thing are you
+00:51:20.440 ready to apply the knowledge again my
+00:51:22.640 favorite guy Goku uh are you all ready
+00:51:26.319 uh should I wait for some
+00:51:31.079 questions how is that LSM
+00:51:34.000 implementation system no it's a search
+00:51:36.640 system it provides the indexing the
+00:51:38.880 reverse indexing but you can also use it
+00:51:40.640 for
+00:51:43.799 other no no no they provide a indexing
+00:51:47.599 which actually do the reverse index so
+00:51:50.280 data is stored as it is data files and
+00:51:52.319 index files right how what is the index
+00:51:55.040 that index is a reverse index so you
+00:51:56.680 will have an index for each word which
+00:51:58.559 points the document in elastic search so
+00:52:02.200 that is the index for that thing so in
+00:52:04.040 elastic search what you usually do is
+00:52:05.680 like I type something give me all the
+00:52:08.040 suggestions for it right what are all
+00:52:09.880 the things that has this word it's
+00:52:11.599 basically reverse index I have a text
+00:52:13.760 what are the documents that have my text
+00:52:16.000 okay it's basically like a key is the
+00:52:18.319 word for it okay there is nothing much
+00:52:20.599 there so that's the thing
+00:52:24.839 here again moving to the next bit this
+00:52:29.240 is the most uh interesting bit for me I
+00:52:31.559 will move this
+00:52:33.839 guy
+00:52:35.720 okay
+00:52:37.240 cool okay going back to the project I
+00:52:40.240 worked on for some time it's interesting
+00:52:42.319 to talk about it yeah so I was working
+00:52:44.440 in this project for around three years
+00:52:46.760 now I moved out of it now uh but this is
+00:52:49.200 a very interesting use case I solve that
+00:52:51.799 uh so I think the domain that we wear in
+00:52:54.760 is on the connected vehicle platform uh
+00:52:57.079 we were working with one of the car
+00:52:59.280 manufacturer uh instead of getting into
+00:53:01.599 the what we developed for them I will
+00:53:04.119 get into the what use case which this
+00:53:06.760 particular talks is on uh so there was a
+00:53:09.760 use case where vehicle will stand stream
+00:53:13.119 of data so connected vehicle means they
+00:53:15.319 have a Sim in it they can send the
+00:53:17.760 Telemetry data to the server so they
+00:53:20.760 send a Telemetry data to our backend
+00:53:23.079 server they just stream it whenever they
+00:53:25.480 generate data base the sensor that they
+00:53:27.319 have based on like datas like whether
+00:53:30.040 the door is open or not what
+00:53:31.520 acceleration that I meant whether the
+00:53:33.040 pedal is pressed or not what gear I'm
+00:53:35.319 using all those informations so Those
+00:53:37.880 sensors will be captured and will be
+00:53:40.480 forwarded to the backend system and the
+00:53:42.880 backend system has tons of business use
+00:53:44.799 case built on top of it one of the use
+00:53:46.839 case
+00:53:47.960 actually um we had to keep the latest
+00:53:51.599 record that we get from the vehicle so
+00:53:54.680 that means there is a stream of data at
+00:53:57.160 every point I need to know what is the
+00:53:59.319 latest record that I got from the
+00:54:01.200 vehicle um so basically we listen to all
+00:54:06.160 the stream of vehicles data and we put
+00:54:08.920 it to a database and the structure is
+00:54:10.880 like this we have a vehicle ID and the
+00:54:13.000 latest value it's kind of a Json that's
+00:54:15.040 why I put it it has lot of sensor values
+00:54:17.559 and we were using posters for it that
+00:54:19.440 was a mistake I said uh so everything
+00:54:23.280 worked well till the morning where as
+00:54:26.720 was down the entire application was down
+00:54:28.839 the major reason is that it was a Monday
+00:54:31.079 morning it's the interesting thing is
+00:54:32.839 that everyone wants to go to office and
+00:54:34.680 use the car on Monday morning right
+00:54:37.200 because like how many of you go to
+00:54:38.920 office on Monday morning prefer to go to
+00:54:41.559 office on Monday morning
+00:54:43.680 Monday at least we do come I know how
+00:54:46.280 many people but at least like if you are
+00:54:48.160 going to
+00:54:49.119 office
+00:54:50.720 not that's a different thing but at
+00:54:53.040 least uh so very interesting thing one
+00:54:56.160 of the Monday there was a huge peak of
+00:54:58.760 load where we were inserting around
+00:55:01.280 20,000 records every second and our iops
+00:55:05.400 load was just 15,000 we were not able to
+00:55:08.319 handle that
+00:55:09.400 load and our system crashed we couldn't
+00:55:12.480 find out how to fix it because a load is
+00:55:14.359 coming in all like we could do is
+00:55:16.119 increase the iops we did that and it
+00:55:18.559 eventually fixed it but we know that
+00:55:20.559 that the problem will come on any day
+00:55:22.760 because the car manufacturer was selling
+00:55:24.920 more such cars and and our prediction
+00:55:27.839 was 10x vehicles in the next year so we
+00:55:30.480 have to support this use case much
+00:55:32.359 better in upcoming months we can't wait
+00:55:35.079 for it that's where the request comes to
+00:55:38.039 have a better solution for this use case
+00:55:40.160 what can we do about it any solutions
+00:55:43.039 anyone have any rough idea what you
+00:55:44.839 could have
+00:55:47.079 done some of the people are sitting here
+00:55:58.400 we did all those if you look at this we
+00:56:00.640 have replicas but the problem is that
+00:56:03.240 our I is hit at the peak that means that
+00:56:07.359 in the whole cluster I can't write
+00:56:09.720 anymore because my this cannot handle
+00:56:12.000 more than
+00:56:13.520 that I'm getting huge load of data but I
+00:56:17.240 can't
+00:56:18.000 insert because I don't have the
+00:56:19.960 bandwidth for it I don't have a
+00:56:21.319 throughput for
+00:56:23.240 it so
+00:56:27.799 because this rights are failing because
+00:56:30.599 the database is already overed with the
+00:56:32.440 existing rights the
+00:56:37.760 rights
+00:56:42.319 yeah that system so you can go to a
+00:56:45.359 distributor systems which can handle
+00:56:47.799 parall rights right on multiple systems
+00:56:51.760 not just on a single Master server thing
+00:56:54.200 we can have multimaster or multiple
+00:56:56.400 things which are listening for the
+00:56:57.520 rights okay like I said the one that we
+00:57:00.520 were using the post which was not in a
+00:57:03.079 high aity mode in terms of multimaster
+00:57:06.039 thing so we were not having partitions
+00:57:08.200 we just had a single partition which is
+00:57:10.039 just replicated to the different ACS and
+00:57:13.400 just for the availability purpose it is
+00:57:15.400 not for the throw purpose purpose okay
+00:57:19.520 uh so I think let's get into the actual
+00:57:23.079 problem with for why is it not
+00:57:26.720 so let's understand how postgress Works
+00:57:28.920 to understand what's the problem that we
+00:57:30.520 faced so in postgress when you do update
+00:57:34.160 it's not actual inut in place update it
+00:57:37.680 is actually a delete and insert for
+00:57:40.720 deleting the record it also puts a one
+00:57:43.039 more entry called Tombstone saying that
+00:57:45.880 this record has to be deleted and it
+00:57:48.559 also writes a new record to it since
+00:57:50.760 it's a Json data and a huge data it
+00:57:53.440 can't fit into the page it puts it in
+00:57:55.480 something called to post has something
+00:57:57.960 called toast which is kind of a heap
+00:58:00.480 which doesn't have a pce structure
+00:58:01.920 optimized for reach and R so we were
+00:58:04.960 unaware of all these things we did like
+00:58:07.160 okay posters is working why can't we
+00:58:09.039 just use it uh we started with a very
+00:58:11.559 small number of vehicles so it scaled
+00:58:14.559 for a very long time for two years it
+00:58:16.480 was working properly we didn't had any
+00:58:18.920 issues one fine morning we had this
+00:58:20.960 issue that's when we understood like
+00:58:23.240 okay I do 20,000 records insert
+00:58:26.640 that means that I have to delete 20 more
+00:58:28.720 records now I have to do 20 right 20K
+00:58:31.839 rights now plus another 20K rights for
+00:58:34.319 deleting the older records because that
+00:58:36.559 dis has to be cleaned up right someone
+00:58:38.520 has to go back and then delete do the
+00:58:40.599 thing there is a process called Auto
+00:58:42.319 vacum and post which actually do the
+00:58:45.720 voming thing like removing unnecessary
+00:58:48.480 dust out of the
+00:58:49.799 system this is the way the post Works
+00:58:52.319 anyone have question
+00:58:54.440 here but you have understood what's the
+00:58:57.039 problem with this right so should we use
+00:58:59.960 post or not okay that's a good question
+00:59:02.680 again it's specific to the use case so
+00:59:05.559 posters has a really good optimization
+00:59:07.559 called hot which
+00:59:09.480 is update in pup or something like that
+00:59:12.400 you can read about it which makes so
+00:59:14.280 that it updates the same page instead of
+00:59:16.640 writing to the different page it leaves
+00:59:18.520 out some page size for such updates to
+00:59:21.400 come so that whenever such if it just
+00:59:24.079 writes to 60% of the page and keeps 40
+00:59:27.319 40 per remaining for such updates to
+00:59:30.240 come so whenever such updates come it
+00:59:32.760 will use the remaining space just for
+00:59:34.359 the updates but those are optimizations
+00:59:36.760 by default you won't get it you have to
+00:59:38.400 enable it uh so we didn't use it the way
+00:59:41.680 we solved it is we move to Rus in a high
+00:59:44.440 availability in a multi partition setup
+00:59:46.920 the reason we want is there is an
+00:59:49.359 additional catch here so when we if I go
+00:59:52.079 back to here right to look at it there
+00:59:54.559 is a specific thing in a
+00:59:56.640 car where there is a protocol which says
+01:00:00.520 whenever a car goes out of the network
+01:00:02.640 and comes back it has to send the latest
+01:00:05.280 data first not the old data in a message
+01:00:08.880 order that means it is there to make
+01:00:11.480 sure that car crashes it has to send the
+01:00:14.440 crash data first not the older data it
+01:00:17.000 is for the safety purpose enforced by
+01:00:18.760 the protocols but that is a problem for
+01:00:21.640 us because we want the me message order
+01:00:23.680 to know what is the latest dater there
+01:00:25.680 is no such way we have to handle it hous
+01:00:28.960 uh so that's when what we did we read
+01:00:31.280 the latest record from the database and
+01:00:33.480 then we compare the time stamp saying is
+01:00:36.440 this latest than the record that I have
+01:00:38.400 on the database or not if it is I will
+01:00:41.599 write it if not I will discard it so
+01:00:45.000 that's how this one was implemented so
+01:00:47.480 if you look at it it is 20K reads plus
+01:00:50.880 20K wres plus 20K deletes so that many
+01:00:55.160 iops that we
+01:00:57.119 using and our system just cried so we
+01:01:01.480 move to a red set cluster for trade we
+01:01:06.680 traded of consistency for latency
+01:01:09.920 because it's a stream of data and our uh
+01:01:14.520 clients are fine with having outdated
+01:01:16.920 data for a very short time because
+01:01:19.359 anyways I will be updated with the next
+01:01:22.280 latest data because steam of data is
+01:01:24.760 coming in if if I miss up One update
+01:01:27.599 that's fine for them so that's the use
+01:01:30.480 case that we had and we looked into it
+01:01:32.799 we thought why can't I use the in memory
+01:01:34.920 structure which is very optimized for
+01:01:36.480 both recent rates right because in
+01:01:38.640 memory like I said it is much faster for
+01:01:41.359 both re and rs then dis on any given day
+01:01:45.280 so that's what we did we moved from post
+01:01:48.680 to Red dis but that's not where it stops
+01:01:51.680 so we took it we thought like what there
+01:01:54.680 is no other option for us to have a
+01:01:57.079 better approach but the persistence is
+01:01:59.160 also supported we looked into it there
+01:02:01.799 are options available but we thought
+01:02:03.680 like why can't we write one on our own
+01:02:06.680 okay so that's when we actually came up
+01:02:09.599 with the internal hack for around two
+01:02:12.640 months uh where people we were asked we
+01:02:15.680 asked every one of our employee to pick
+01:02:17.599 up this problem statement and create
+01:02:20.319 their own database which could solve
+01:02:22.359 this problem there are few constraints
+01:02:24.599 uh like I said the there are heavy reach
+01:02:27.440 and rights operations both re and rights
+01:02:30.520 has to be considered and the persistent
+01:02:33.079 should also be there those are the two
+01:02:34.880 main things and it's also update it's
+01:02:37.079 kind of a key value St so that is the
+01:02:39.319 basic use case they took it they wrapped
+01:02:41.920 into a different use case and then added
+01:02:44.599 some more con to make it interesting
+01:02:47.680 that's where this one comes
+01:03:06.160 any questions at this point till now can
+01:03:09.039 I go to the next space of
+01:03:11.960 session
+01:03:14.279 use we do have message broker this part
+01:03:17.920 is message broker okay this part is all
+01:03:20.760 message broker but how do I know what is
+01:03:22.319 the latest data in the message
+01:03:24.599 book uh I
+01:03:35.400 mean that back pressure is already there
+01:03:38.559 so this one crashed but after that we
+01:03:42.520 fixed it this back pressure was there so
+01:03:44.599 if I can't consume it I won't consume it
+01:03:46.960 at this speed if the this consumption is
+01:03:49.160 slow this consumption will also be slow
+01:03:51.960 but the problem for our client is they
+01:03:54.839 open app
+01:03:56.520 it is giving 30 minutes whole
+01:03:58.839 data and the users will be frustrated
+01:04:01.720 right you are using your car and then
+01:04:03.680 you're opening your app it has 30
+01:04:05.480 minutes old
+01:04:06.640 data which they are not happy
+01:04:10.279 with so that's when we move to red and
+01:04:13.559 fixed it but coming to the hackathon
+01:04:16.720 thing that we did so there are few
+01:04:19.240 constraints which are something I picked
+01:04:21.720 up and try to uh use it to my solution
+01:04:25.960 to get the better solution uh so I
+01:04:29.400 participated in the hakatan and these
+01:04:31.799 are the various things that I would say
+01:04:33.880 it's a important pieces in the problem
+01:04:35.960 statement so one thing they have points
+01:04:39.520 only for rights not for the reads though
+01:04:42.640 the use case actually has both reads and
+01:04:46.039 rights at the same level and there is no
+01:04:49.039 time limit for system recovery it can
+01:04:51.000 take infinite time to get recovered
+01:04:53.880 there is no time limit this is an add
+01:04:56.039 thing which they did just to make it
+01:04:57.599 interesting in a real world scenario
+01:04:59.920 this is not possible and another point
+01:05:02.480 is you can have additional point for
+01:05:04.440 durability this point is very high such
+01:05:07.240 that it CES everyone to do persistence
+01:05:11.279 and they said like you will get nvme SS
+01:05:14.160 in test environment whenever we deploy
+01:05:16.000 it there is an nvme SS that means it is
+01:05:18.599 really good even for random rights and
+01:05:20.400 random RS compared to hard disk which is
+01:05:23.000 terrible for it this one can give
+01:05:25.960 considerable performance for random
+01:05:27.960 rights and random RS and there is a
+01:05:29.839 variable payload size why does it matter
+01:05:32.119 I can have any size of payload rate it
+01:05:34.240 matters because if you have a variable
+01:05:36.039 payload L I can't do in place update if
+01:05:39.599 I have a first package of size 100 KB
+01:05:42.799 and next package of size 150 KB I can't
+01:05:46.119 write 150 KB data in 100 KB size I can't
+01:05:50.440 do in place of dat I have to write it
+01:05:52.920 somewhere else and delete the record
+01:05:55.000 right
+01:05:56.319 same way I have a 100 KB data sitting
+01:05:59.400 there and I have 80 KB data coming in
+01:06:02.319 there's a 20 KB is Miss it's an internal
+01:06:04.880 fragmentation for the particular page so
+01:06:07.359 then I have to have a different process
+01:06:09.119 that goes and reads remove the internal
+01:06:11.880 fragmentation come back give me back the
+01:06:14.200 data give me back the size sorry so
+01:06:17.039 that's additional constra which enfor us
+01:06:19.400 to go with the up and only thing or new
+01:06:23.200 insert and delete approach so let's get
+01:06:26.880 into the design Choice which I made uh
+01:06:30.119 so B3 like I said it is optimized for
+01:06:32.799 reads but it sucks for rights similarly
+01:06:35.400 LSM is good for rights you all would
+01:06:37.200 have thought like okay you would have
+01:06:38.520 gone with the right LSM because right
+01:06:40.559 intensive I didn't do that I looked into
+01:06:43.200 it I thought I can take a even better
+01:06:45.720 approach this is a mixture of both B3
+01:06:47.799 and LSM can I combine this two and then
+01:06:50.240 get a better approach which is good for
+01:06:52.520 both reads and wrs there is a catch here
+01:06:55.799 this records how many records that get
+01:06:57.680 inserted is on the there is a limit for
+01:06:59.799 it I didn't put it here but there was a
+01:07:02.000 limit on how many records that they can
+01:07:04.319 inest to the system okay and they also
+01:07:07.079 give a size of the ram that we get for
+01:07:10.319 the database to be deployed so when I
+01:07:12.720 calculated it the size of the ram I can
+01:07:15.520 easily hold the index in memory so
+01:07:18.400 that's when I took a call okay before
+01:07:20.920 going there why I didn't choose the LSM
+01:07:23.960 uh there is a bit there so in LSM if you
+01:07:26.440 look at it I have to write it to a Val
+01:07:28.640 to make it durable right and then I also
+01:07:31.880 have to in the Asing process I have to
+01:07:34.599 take the me m table write it back to the
+01:07:37.119 disk there are two disk operations which
+01:07:39.920 are happening be it Asing or sync
+01:07:42.400 together it is two a two operation I
+01:07:44.799 thought like why can't I merge this two
+01:07:46.520 into one can I do much better than this
+01:07:50.400 okay that's where my Approach comes so
+01:07:53.480 it has inmemory index and and up and P
+01:07:57.240 so I thought Val is already holding my
+01:08:00.160 record why do I need to have a different
+01:08:02.359 structure which holds the same record I
+01:08:04.960 will not even delete my Val record I
+01:08:07.680 will just keep it which already has my
+01:08:09.920 record I just need an index which says
+01:08:11.920 where in my Val the record actually
+01:08:14.760 resides and I felt that I can keep it in
+01:08:18.080 memory to make sure that just one disk
+01:08:21.080 seek and dis write for both reach and R
+01:08:25.120 if you look at the read flow R1 and R2
+01:08:27.799 it goes to the in memory index it checks
+01:08:31.640 whether the particular key is present or
+01:08:33.880 not in my system and if it is present
+01:08:36.279 the key value it looks like this it
+01:08:38.759 holds a file ID whatever the name of the
+01:08:41.238 file and the offset where that resides
+01:08:44.920 and the size of it how much I have to
+01:08:47.000 read from the offset and what is the
+01:08:48.799 time so this time samp is needed when I
+01:08:51.399 do update later I can compare this with
+01:08:54.600 the latest data coming to see whether
+01:08:56.560 the latest data or not so this three
+01:08:59.759 details are more than enough for me to
+01:09:01.679 go to any file read something and then
+01:09:04.719 give it back like I said nvme SSS are
+01:09:07.960 good for random reads also the
+01:09:10.439 performance that NV SS provides is much
+01:09:13.319 better for random reads so I thought I
+01:09:16.040 will just do basic what posters do like
+01:09:20.000 this part was dis in postgress I moved
+01:09:24.158 it to in memory
+01:09:26.799 this bit was I think for the people in
+01:09:29.158 the zoom this bit the inmemory index was
+01:09:32.399 also on dis in post I thought I will
+01:09:35.839 move that also here that will make all
+01:09:38.600 my dis seek just to
+01:09:40.839 one so and when I write it I write it
+01:09:44.560 just to the active files just like how
+01:09:46.399 it was on LSN okay I will have some set
+01:09:49.520 of open files I will just write I will
+01:09:52.238 just up to that file I will not do any
+01:09:54.960 inl operation once I reach a limit I
+01:09:57.760 will move to read only operation sorry
+01:10:00.360 read only data FS once that is moved I
+01:10:03.679 have my own htics and metrics which
+01:10:07.320 takes and do compaction which takes the
+01:10:10.760 read only data do compaction and gives
+01:10:13.440 it back so you can ask like hey this is
+01:10:15.840 again 1+ one yes but if it is if you
+01:10:19.400 consider that then it is 2 + 1 in LSM if
+01:10:23.120 you consider compaction also in to the
+01:10:25.880 disk
+01:10:26.880 access so yeah this is the design that I
+01:10:29.920 have so if you go to the read path again
+01:10:32.120 like I said if it check it it will check
+01:10:34.400 whether the ID is present in the index
+01:10:35.960 or not if it is present it will take the
+01:10:38.239 file ID offset and size with that
+01:10:40.600 details it is more than enough to query
+01:10:42.560 any file system and get any data that
+01:10:44.840 you want and I deize the buy to object
+01:10:47.679 and return it back and there is a right
+01:10:51.080 path which is I get a data I serialize
+01:10:53.600 it I write it to one of the open file
+01:10:55.800 update the index saying that this is
+01:10:57.520 where my new record is and my job is
+01:11:01.360 done coming to the compaction part which
+01:11:04.159 we have talked before again the same
+01:11:05.920 thing the way it happens so it takes
+01:11:08.400 multiple records it do m s and then it
+01:11:11.480 puts a new record deletes the old record
+01:11:14.600 um that's how the compaction works but
+01:11:17.000 the way I have done it in my system
+01:11:19.360 there are two metrics which I look
+01:11:21.960 for not matrics but two things two
+01:11:24.480 constraints are of uh one is every
+01:11:27.480 minute I check for compaction whether I
+01:11:29.880 have to do compaction or not and the way
+01:11:32.360 I have I will check it is I will see
+01:11:34.679 whether the overall disk date record
+01:11:37.960 percentage is greater than 50 or not
+01:11:40.000 what is a worst case thing what is the
+01:11:41.760 best so let's assume this if my system
+01:11:44.920 don't even have de
+01:11:46.719 records I don't even have to do a
+01:11:49.440 compassion right because all of my data
+01:11:51.920 is correct it is needed I don't even
+01:11:55.239 even need to delete the
+01:11:59.600 records so that's why whenever I write I
+01:12:04.080 also make sure that I have missed one
+01:12:06.840 record that has to be deleted I hold a
+01:12:09.360 counter which says how many records has
+01:12:11.719 to be deleted at any given time that
+01:12:14.280 gives me a vision or idea there is a
+01:12:18.000 question in the chat is anyone looking
+01:12:19.840 at the
+01:12:23.440 question which one the question all the
+01:12:26.480 questions is it okay sorry I think it is
+01:12:30.320 uh mentioned that uh all the questions
+01:12:32.960 in the chat we will go over it later
+01:12:35.639 sorry for that um so I think again the
+01:12:39.840 htics right coming back to what is the
+01:12:41.840 worst case thing which is I compact
+01:12:45.760 unnecessary data which I don't want to
+01:12:48.040 do that's when I put this thing 50% that
+01:12:51.400 means when I come back I'm going to get
+01:12:54.880 better than 50 that means there are 50%
+01:12:57.320 worst data 50% best data I will keep
+01:12:59.880 only the new data sorry not worst and
+01:13:01.920 old and new so I will only keep the new
+01:13:04.600 data and I get 50% of fitback so if I do
+01:13:09.320 6040 I have to rewrite like why you can
+01:13:12.400 ask me like why is it 50 why can't it be
+01:13:14.520 40 why can't it be 30 something else if
+01:13:17.560 it is 30 that means only 30% of my data
+01:13:20.840 is bad but for that I'm rewriting 70% of
+01:13:24.679 data
+01:13:27.159 but if I go with 50 50% of data is worse
+01:13:31.840 that means that I have to delete it and
+01:13:34.719 when I do it I'm going to do only 49 or
+01:13:38.120 something like that so that is always
+01:13:40.199 optimal so that's a htic I got uh and
+01:13:43.440 this is the process that I did so
+01:13:45.679 whenever I do a compaction uh create new
+01:13:48.840 files for writing close all the open
+01:13:51.080 files so that it will be available for
+01:13:53.239 uh uh compaction
+01:13:55.560 I trade through the records index
+01:13:57.639 instead of going through the SS table
+01:13:59.280 like how LSM do I went through the index
+01:14:02.600 because for me index is a inmemory seek
+01:14:04.760 I don't have to worry about dis hold
+01:14:06.920 seek I went through all the index take
+01:14:09.360 all the records and write it back to the
+01:14:11.440 new F again this is random reads for me
+01:14:15.000 but I'm fine with it because it was en
+01:14:18.000 uh so this is how it works once all the
+01:14:21.440 records have been moved that means I
+01:14:23.480 have moved all my old records mer them
+01:14:26.239 only kept the new records in the
+01:14:27.920 separate files I will delete the older
+01:14:29.880 files that's how the compassion I have
+01:14:32.320 designed work uh any question till this
+01:14:45.080 point no I think think about it so
+01:14:48.800 that's what if it is greater than 60
+01:14:52.520 then I have a probability that if I can
+01:14:55.159 see my thought process is like I only
+01:14:58.120 want to do efficient one what is
+01:15:00.159 efficient one 50/50 anything over is
+01:15:03.480 efficient because I'm going to write
+01:15:05.280 less record delete more record right I
+01:15:08.040 can go for 60 70 80 but the problem is
+01:15:10.600 that then I will be keeping lot more
+01:15:12.360 older records in my system then is a
+01:15:16.040 huge process for my compaction to happen
+01:15:18.560 so it is better to do smaller smaller
+01:15:20.239 compactions if you have run Cassandra I
+01:15:22.159 think knows about it smaller compactions
+01:15:25.199 much faster much better than running a
+01:15:27.440 whole long bigger
+01:15:31.080 comparion uh moving to the concurrency
+01:15:33.639 Primitives how many of you know about
+01:15:35.320 what is concurrency primi what are the
+01:15:38.199 concurrency
+01:15:50.360 Primitives at least let's go to what is
+01:15:53.560 let's understand what is concurr at
+01:15:55.400 least people understand what is
+01:15:56.360 concurrency right I have multiple
+01:15:58.560 threads I want to do a process I want to
+01:16:02.000 process multiple things concurrently
+01:16:04.000 that means simultaneous at the same time
+01:16:05.840 not at the same time but in a timeline I
+01:16:09.040 want to do multiple things concurrently
+01:16:10.760 concurrency and parallel things are two
+01:16:12.320 different things parallel means that I
+01:16:14.000 will do in parallel where as concurrency
+01:16:16.760 means that I do one after another kind
+01:16:18.520 of Tes kind of a thing uh so concurrency
+01:16:22.000 lets you utilize your system to the the
+01:16:25.000 fullest like you have multiple threads
+01:16:27.000 you can perform multiple tasks one
+01:16:28.960 waiting one doing something you can
+01:16:31.400 mismatch you can um pick and do multiple
+01:16:35.440 task utilizing the CPU to the fullest
+01:16:38.480 that's what concurrency is and it is
+01:16:40.320 very essential for performance and
+01:16:42.239 respon responsiveness and specifically
+01:16:44.440 resource utilization uh which is your
+01:16:46.920 CPU time uh and let's come to the
+01:16:49.960 concurrency primitive so concurrency
+01:16:52.080 primitive are your newex logs all the
+01:16:55.840 logs all the ways of getting the thread
+01:16:59.199 safety it's basically a name given to
+01:17:02.360 the list of whole umbrella of things
+01:17:04.719 which is low level construct that helps
+01:17:06.639 manage and synchronous confront
+01:17:08.400 execution uh and ensures data threat
+01:17:10.800 safety but basically it is your mutex
+01:17:13.520 seore message passing Atomic operations
+01:17:16.760 all those things it's a whole umbrella
+01:17:18.679 te given to the data safety mechanism
+01:17:22.199 for in concurrent world okay so why does
+01:17:26.480 it even matter in every database you do
+01:17:30.560 parallel reads and rates your what are
+01:17:33.440 the basic things you don't want one read
+01:17:36.320 to affect the other read you don't want
+01:17:38.320 your one read to wait for the other read
+01:17:40.080 to finish right you don't want some
+01:17:43.120 other keys right to block your read I am
+01:17:47.040 updating logage but why should an's
+01:17:50.080 update has to make me wait for it I am a
+01:17:53.520 different key I don't don't even have to
+01:17:55.400 wait for it I am living in my own
+01:17:57.320 Universe I don't have to worry about it
+01:17:59.800 that's like a pure concurrency right key
+01:18:02.440 level concurrency I can do wrs for
+01:18:05.960 multiple keys in parallel I can also do
+01:18:08.960 reads and wres in parall so that's a
+01:18:12.800 basic thing and we all have most of the
+01:18:16.280 databases that you are seeing they do
+01:18:18.600 mutex logs some of them do copy on write
+01:18:22.199 uh which are much better version but it
+01:18:24.280 takes more
+01:18:25.400 disc access uh but I have gone with a
+01:18:28.840 different approach so okay I didn't go
+01:18:32.840 through this question but what do you
+01:18:35.000 feel about this which one is the best
+01:18:37.080 among the concurrency concurrency
+01:18:38.920 Primitives that you have
+01:18:44.639 used I think most of you would have used
+01:18:47.280 some logs right new Tex read like logs
+01:18:50.440 are much better than mutex because you
+01:18:53.000 can separate read and write parts
+01:18:54.760 separately right reach can happen in
+01:18:56.760 parallel whereas when right happens it
+01:18:59.400 will block all the reach and R whereas
+01:19:01.800 multiple reach can happen at the same
+01:19:03.480 time so that's a optimized version of
+01:19:06.679 mutex similarly message passing is there
+01:19:10.159 semop for is there and atomic operation
+01:19:12.880 there are tons of other things I have
+01:19:14.440 written a Blog about it you can find it
+01:19:16.360 in my website uh on what are those
+01:19:20.520 things but going to it so I felt that
+01:19:25.000 having no lock in the system is much
+01:19:27.120 better than anything else because your
+01:19:29.840 CPU time is much much much faster then
+01:19:32.800 your discon and you make your CPU wait
+01:19:35.719 for something that is the worst thing
+01:19:37.320 that you can do tostem if you want to
+01:19:39.639 achieve the
+01:19:41.199 entire capacity or the throughput of
+01:19:43.679 your system you have to make sure that
+01:19:46.840 you don't make anything made for
+01:19:49.440 something so it is bit hard to achieve
+01:19:52.719 but I have done multiple things to make
+01:19:55.560 sure that I can arri at that solution
+01:19:58.199 one interesting thing one of my
+01:19:59.760 colleague did the similar kind of a
+01:20:02.080 design uh it was a coincidence honestly
+01:20:05.400 speaking uh the same design in memory
+01:20:08.159 structure up and only file there is a
+01:20:11.520 database called bitc which is based on
+01:20:14.560 this design uh so we both referred it we
+01:20:17.800 fa is much better than this we
+01:20:19.520 implemented it but he did through
+01:20:22.920 interestingly he also did it in
+01:20:25.280 he also used the active W framework
+01:20:27.719 which I used so it's not a language
+01:20:29.719 which gave the performance it's not the
+01:20:31.920 framework which gave the performance
+01:20:33.679 it's actually The Primitives which gave
+01:20:35.679 the performance so I did it using Lock
+01:20:38.520 Free he did it using lock and my
+01:20:42.280 solution was 20% to 20 to 30% better
+01:20:45.280 than
+01:20:46.159 this and when we looked into the
+01:20:48.800 performance of the database when we did
+01:20:50.520 the low test his system was not
+01:20:53.199 utilizing the CPU to the it was stuck at
+01:20:55.600 40% and 50% of usage but the throw put
+01:20:58.679 is gone mine was at 98 99% of CPU and
+01:21:03.159 that's the max throw put that I can get
+01:21:05.480 if I want to go even better than that I
+01:21:07.679 need to go for a better design I can't
+01:21:09.800 do anything with the concurrency
+01:21:12.080 primitive anymore so the way I have
+01:21:14.639 implemented is so if you look at it
+01:21:17.320 there is a inmemory structure which is
+01:21:18.960 basically a hashmap and if you are in a
+01:21:21.320 Java world you know that there is a
+01:21:22.800 concurrent hashmap uh uh which gives you
+01:21:25.600 the concurrent way of accessing a
+01:21:28.000 hashmap uh I use something called Dash
+01:21:31.560 map in Rust which actually takes the
+01:21:35.120 concurrent hashmap implementation in
+01:21:36.920 Java but do it without locking so the
+01:21:40.560 way they have done it is using Atomic
+01:21:42.480 operations there is an operation called
+01:21:44.400 C compare and swap so it basically works
+01:21:48.639 optimally it's not a pessimistic lock
+01:21:50.840 it's optimistic lock so what is
+01:21:52.800 pessimistic what is optimistic
+01:21:55.159 pessimistic means I lock it irrespective
+01:21:58.440 of whether this could be accessed in
+01:22:01.199 parallel or not I don't even know
+01:22:03.080 whether I need it or not but
+01:22:04.520 irrespective of it I will lock it
+01:22:06.880 whereas optimistic I will try to update
+01:22:10.080 it but if I find it like at the last
+01:22:12.679 moment this is being accessed by someone
+01:22:14.520 else I will come back I will revert so
+01:22:17.960 the way it works is there is a compar
+01:22:20.600 andap so I say change this value from 1
+01:22:23.679 to two
+01:22:25.080 it will change only when the value is
+01:22:27.159 one if the value is changed to one to
+01:22:29.600 three by someone else it will revert
+01:22:31.600 back and then say like someone else
+01:22:33.159 changed it your transaction P so that's
+01:22:36.560 a hardware level thing being provided by
+01:22:39.600 lot of chips there is a c operation
+01:22:42.159 being provided like if you write
+01:22:43.840 assembly code right there is a c
+01:22:46.360 operation provided by your chipset
+01:22:48.120 itself that do this at the assembly
+01:22:50.840 level there are uh like it was first in
+01:22:53.960 software LEL and people find it like
+01:22:56.400 this if if this is implemented in
+01:22:58.280 Hardware it will be much more efficient
+01:23:00.440 that's how we move to the hardware level
+01:23:03.000 uh so the one that exists here it uses a
+01:23:05.639 hardware level C operation which do the
+01:23:08.199 atomic rights so all the atomic integers
+01:23:11.040 that you are seeing right in all the
+01:23:12.760 language implementation they are based
+01:23:14.760 on the C operation uh it actually takes
+01:23:17.360 the v data and the new data and it
+01:23:19.679 compares the current data with the old
+01:23:21.679 data only then it will update the new
+01:23:24.120 data or else it will come back and
+01:23:25.920 reprocess
+01:23:27.000 it okay so my index updates are now Lock
+01:23:32.000 Free what is the next thing now I have a
+01:23:34.920 disk write I have to write to the disk I
+01:23:37.800 have a file Handler for the disk and in
+01:23:40.199 R the beautiful R won't let you have the
+01:23:43.400 same pointer by more than one thread if
+01:23:46.880 it is a mutable thing only one thread
+01:23:49.679 can hold access to the pointer so that
+01:23:52.280 no one else can access the or up upate
+01:23:54.639 the pointer in parallel universe okay
+01:23:57.280 that's the way rust Works uh so the way
+01:24:00.080 I have did it there is a concept called
+01:24:02.120 message passing and the arst uh
+01:24:05.440 framework that I use is built on
+01:24:07.679 something called actors uh they provide
+01:24:10.360 something called actors which is
+01:24:12.719 basically a programming model Al
+01:24:14.840 together like object oriented functional
+01:24:17.400 rate actors is also a different
+01:24:19.120 programming model it's all act like a
+01:24:21.600 message passing thing from actor a i
+01:24:24.440 pass a message to act B all of our uh
+01:24:27.679 networking right uh the Sim Sim that you
+01:24:30.560 are using all of them are based on airl
+01:24:33.920 which is based on actor base that's how
+01:24:36.560 they make sure that highly concurrent
+01:24:39.320 mobile usage is happening so that is the
+01:24:43.360 actor note it down you can read about it
+01:24:45.639 later but I use message passing an actor
+01:24:49.719 while writing to the dis so when you go
+01:24:52.159 back to the first piece
+01:24:55.880 here so whenever a dis writer picks
+01:24:59.040 something it picks a random one out of
+01:25:01.639 the active file and there is there are
+01:25:05.320 actors uh receiving message for each of
+01:25:08.400 the F so basically it's like one thread
+01:25:11.520 for a particular file that thread
+01:25:13.679 doesn't have to worry about someone else
+01:25:15.400 accessing the file at the same time
+01:25:16.880 because he is the only writer and the
+01:25:19.960 way that thread gets notified is through
+01:25:22.600 actors actors will be fed with messages
+01:25:26.119 that the Frameworks will take care of
+01:25:28.880 that message passing is happening
+01:25:31.880 through the message passing thing that
+01:25:33.639 you get on threads and process so that
+01:25:36.360 is the way that I have handled the right
+01:25:38.960 part so all my rights no longer go
+01:25:41.679 through the
+01:25:43.280 Locking so it just goes to the dis
+01:25:45.920 writer disk writer picks up one of the
+01:25:48.960 open file it just puts a message hey
+01:25:51.360 insert it to the actor and it will wait
+01:25:54.320 for the message to come back from the
+01:25:55.760 actor the moment it gets the message
+01:25:58.159 back from the actor it says tells the
+01:26:00.560 client hey I have your data ready so
+01:26:03.440 that's how the write works so then there
+01:26:05.760 is a read so the interesting bit that
+01:26:08.719 you have the basic read that any of your
+01:26:12.320 system that you're using you cannot read
+01:26:14.920 two you cannot have two different reads
+01:26:17.560 on the same file Handler you open a file
+01:26:20.239 you open a file in a read mode you will
+01:26:22.280 get a file Handler right whatever
+01:26:23.800 variable you getting out of it a file
+01:26:25.480 hander that file hander will not be used
+01:26:28.800 for multiple reads at the same time
+01:26:31.639 that's a implementation thing so there
+01:26:33.639 is a better version of it called P read
+01:26:36.440 which is parallel read uh whereas in
+01:26:39.000 Rust it is read exact at uh which
+01:26:42.000 internally use a p in C which internally
+01:26:45.040 use a different uh Corner level thing uh
+01:26:49.000 so I made sure that I can read from the
+01:26:51.600 same file in parallel so this part is
+01:26:54.600 also not blocking my read read is not
+01:26:56.920 blocking my right is not blocking my
+01:26:59.119 index is not blocking what is the next
+01:27:01.040 thing I have up only file Handler so
+01:27:03.800 that I don't have to worry about parall
+01:27:07.119 okay yeah this bit is bit different so I
+01:27:09.360 had a different file Handler for read
+01:27:11.360 and WR so I open the same file in a read
+01:27:14.600 mode and I open the same file in upend
+01:27:16.800 mode so that I don't have to use the
+01:27:19.040 same file hander for both reach and
+01:27:22.000 right so yeah it's bit tricky but try to
+01:27:25.440 understand the bit and for the metrics I
+01:27:27.639 use Atomic integers again uh that will
+01:27:30.400 make sure that this is also not block
+01:27:33.880 any questions
+01:27:36.840 Lo should I should I
+01:27:41.880 ask yeah please feel free to ask so in
+01:27:45.840 the fourth line you said use different
+01:27:47.679 read only and op fire for parallel read
+01:27:50.560 and right to simple yeah so when a
+01:27:52.880 system access any file it's log that
+01:27:56.159 file right
+01:27:58.239 so it does can we parall do read and
+01:28:01.960 write it doesn't there is no lock
+01:28:04.719 concept for a file you have to put it on
+01:28:07.360 your application Level if you want the
+01:28:09.560 file should not be accessed by someone
+01:28:13.280 else so I think some of these folks have
+01:28:16.400 tried it in their training process like
+01:28:18.800 someone tried to access right to the
+01:28:21.480 same file that was reading it will not
+01:28:23.920 give Rie those options out of the box
+01:28:26.480 you have to ose it at the application
+01:28:28.679 Level you can have a read and write
+01:28:32.239 Handler for the same file at any
+01:28:35.080 given yeah but actually in operating
+01:28:38.800 system there is a concept how this
+01:28:41.080 process or any thread executes it uh
+01:28:43.520 locks the
+01:28:45.280 resources uh so this is what I'm
+01:28:48.080 relating so let's say there is
+01:28:51.440 a so OS doesn't give you those
+01:28:55.520 functionalities out of the box it is the
+01:28:58.440 application that provides it you can ask
+01:29:00.719 the OS to give the functionality which I
+01:29:02.840 didn't which I said like my system will
+01:29:05.159 take care of it I know what I'm doing
+01:29:07.320 give me the
+01:29:09.199 access okay Lo thank you
+01:29:13.119 yeah uh okay next thing which is the
+01:29:16.679 interesting thing I said database
+01:29:18.440 recovery flow uh so in my design the
+01:29:23.159 only the in Mor index has to be
+01:29:25.040 recovered like how in LSM only the in
+01:29:28.719 memory part has to be recovered right
+01:29:30.560 similarly in my design only the inmemory
+01:29:32.800 index has to be recovered since there
+01:29:34.600 was no limit on the recovery time I took
+01:29:37.280 my whole long time to read all the files
+01:29:40.320 in parallel index the latest record
+01:29:42.560 based on the time stamp and throw away
+01:29:44.840 the rest of the
+01:29:46.239 records because there was no limit on it
+01:29:48.960 I took all the time but ideally in Real
+01:29:51.520 World what you can do you can have
+01:29:53.080 checkpoints and snapshot
+01:29:54.560 for the index and post the snapshot you
+01:29:57.000 can actually uh update the index and
+01:30:00.239 like restore back to the index and then
+01:30:02.520 post that you can read and then update
+01:30:04.280 the index that's how some of the
+01:30:05.840 inmemory databases work and one more
+01:30:08.800 optimization there I did buffer reader
+01:30:11.320 to speed up the read process why I
+01:30:13.600 didn't do the buffer reader for the
+01:30:15.600 actual
+01:30:18.840 read what is a buffer
+01:30:21.199 reader any guesses
+01:30:37.159 you don't read
+01:30:42.000 everything yeah basically what buffer
+01:30:44.600 reader do is you request the index zero
+01:30:48.199 it takes and then the buffer size is 100
+01:30:50.760 KB something like that it takes a 100 KB
+01:30:53.400 from the disc put it in the buffer and
+01:30:56.119 while you are reading it it takes the
+01:30:57.920 next 100 G KB from the disc keep it in
+01:31:01.360 the buffer so that you can do the next
+01:31:03.480 read so it's like kind of a hack that
+01:31:07.080 they did or it's not a hack it's a
+01:31:09.520 optimization that they did to fish the
+01:31:11.880 next record while you are processing
+01:31:13.440 This Record it's similar to how CPU uh
+01:31:16.840 this thing works what is that pipelining
+01:31:19.400 yeah so that's how buffer read works but
+01:31:22.639 why I didn't do that for the ACT ual
+01:31:35.080 read exactly I'm doing random reads I
+01:31:38.480 don't even know whether I need the next
+01:31:40.040 bit or
+01:31:40.960 not whereas here I'm reading the whole
+01:31:43.800 file from zero to the end of the thing
+01:31:46.400 okay I damn sure know that I need the
+01:31:48.239 next bit so that's why I use buffer
+01:31:51.159 readers to P the next record while I'm
+01:31:53.880 processing the current record whereas in
+01:31:55.760 the actual read flow I went with the
+01:31:57.760 basic
+01:31:58.639 read uh that's a bit on database
+01:32:01.480 recovery and okay before getting into
+01:32:04.840 the conclusion bit any questions on the
+01:32:07.400 database that I have
+01:32:20.960 designed I didn't do it but there was Ro
+01:32:24.679 TV implementation by
+01:32:26.480 U and I so I know that like somewhere it
+01:32:32.119 is better than that but I the thing is
+01:32:34.400 that some of the optimization that I
+01:32:36.639 have done I didn't include it here that
+01:32:38.760 won't fit for it because there are
+01:32:41.080 specific to the use case that we were
+01:32:43.119 solving like I did a very custom
+01:32:45.760 encoding for us because the data I know
+01:32:48.440 the data so I did a custom encoding for
+01:32:51.040 it but that won't work for every use
+01:32:53.520 case because they are they were written
+01:32:55.480 for a general
+01:32:56.880 purpose so that's why I didn't compare
+01:32:59.119 it with the them but I'm thinking of
+01:33:01.239 writing a uh I think roxb actually
+01:33:04.199 expose API right like roxb is very
+01:33:07.080 popular uh because they actually expose
+01:33:09.320 an API which anyone can plug in and then
+01:33:11.360 use it so lot of engines have plugged in
+01:33:14.520 Dr DB and used it so I wanted to
+01:33:17.400 implement the same interface and try to
+01:33:20.159 compare it uh but I couldn't get time to
+01:33:23.280 do that
+01:33:24.480 but yeah that's nice
+01:33:27.719 question
+01:33:35.440 yeah think most SS are very cheap we
+01:33:39.119 rarely run databases on hard disk do you
+01:33:42.880 really are people really running
+01:33:44.760 databases on hard disk no I think Amazon
+01:33:48.000 have moved out they still provide gbt2
+01:33:50.320 and gbd3 support but they are also ssps
+01:33:54.440 still work it works but it will be slow
+01:33:57.679 it is not meant for
+01:34:02.239 that any other
+01:34:05.560 questions anyone in the chat before I
+01:34:13.560 finish matters it why does it matter the
+01:34:17.920 question is that like why does variable
+01:34:19.960 payload SI matter uh so the thing is
+01:34:22.199 that like that's what I said right you
+01:34:23.600 have have a different size record the
+01:34:26.040 first key the record size was 100 KB
+01:34:28.840 second one is 150 KB if I keep if I do
+01:34:31.760 in place update I don't have a space for
+01:34:34.560 150 I only have 100 KB because the rest
+01:34:37.400 of the things are taken by the other
+01:34:39.679 records so I have a page page will have
+01:34:42.679 multiple records page is like a page in
+01:34:44.960 OS okay let's assume the file okay 0 to
+01:34:48.800 100 index let's assume that one index
+01:34:51.119 means one k okay 0 to 100 IND index I
+01:34:54.119 have written first record 100 to 250 I
+01:34:57.360 have written the second record 250 to
+01:34:59.639 500 I have third okay now for the second
+01:35:03.080 record I got a 500 KB next payload what
+01:35:08.560 will I do I don't have the space in this
+01:35:11.880 I have to move the whole thing out put
+01:35:14.800 the space for this and then I have to do
+01:35:16.960 the in place update which is very
+01:35:20.760 inefficient po poster doesn't do that PO
+01:35:24.880 do up and only thing poas also provide
+01:35:29.040 mvcc uh which is not included in this
+01:35:31.760 call I think answering to the question
+01:35:34.600 they do it for a reason they provide
+01:35:36.600 multiversion concurrency control you can
+01:35:39.199 R back to any version in post so just
+01:35:42.400 like how we do on Google Docs and other
+01:35:44.440 things right you can go back to
+01:35:46.159 different version of the
+01:35:47.719 data and restore from that for every key
+01:35:51.040 do that so it it is that there for a
+01:35:54.119 reason it keepes multiple records for a
+01:35:56.719 reason so even if you look
+01:36:01.119 at this one you look at it the next
+01:36:04.600 version it has a next version index
+01:36:06.760 pointer right the older version is
+01:36:08.840 having a pointer to newer version this
+01:36:11.239 is bit of the multiversion
+01:36:14.400 implementation so the index will have
+01:36:17.280 the newer record but you can go back to
+01:36:20.840 the older record also if the database it
+01:36:23.760 say like the newer record is crashed
+01:36:26.440 it's not yet committed the transaction
+01:36:28.400 aborted it can go back from here to here
+01:36:31.760 because it keeps the older record
+01:36:36.920 also so they do it for a reason again
+01:36:39.719 I'm saying every database have done
+01:36:41.639 something for a reason learn about it
+01:36:43.800 and use it uh so that is my next bit of
+01:36:47.400 thing uh there is no one fit for all but
+01:36:50.840 there is one hack here now post is
+01:36:53.280 putting themselves as one fit for all
+01:36:55.360 they have enough uh plugins to plug to
+01:36:59.639 make it analytic database make it a
+01:37:01.719 vector database make it a graph database
+01:37:04.360 make it a geospatial database they have
+01:37:06.440 all those extensions but still I feel
+01:37:09.000 like they are not that great compared to
+01:37:12.080 picking a database which is specifically
+01:37:15.400 done for that purpose they always
+01:37:17.639 provide a better performance and like I
+01:37:20.560 said right I think asked that question
+01:37:22.719 post and my are not same for us it looks
+01:37:26.840 like they both are SQL databases from
+01:37:29.320 the internal aspect one is clustered
+01:37:31.679 index one is nonclustered index one do
+01:37:34.159 in place update other do insert and
+01:37:38.239 delete so that is the first point second
+01:37:42.360 these are all the parameters that we
+01:37:44.080 might have to look when you are getting
+01:37:45.920 any use case whether it is AP orp R AP
+01:37:49.840 or structure on structure row base
+01:37:51.960 column base white column base what do I
+01:37:54.040 have to do read optimize WR optimize
+01:37:56.679 what is my read flow what is my right
+01:37:58.280 flow whether I want better reads or
+01:38:00.440 whether I want better rights uh so
+01:38:03.159 everything you have to consider you need
+01:38:04.760 to understand the implementation of each
+01:38:07.159 of your databases and then you have to
+01:38:09.159 make a call uh so yes it depends it
+01:38:13.280 depends like the disclaimer I said
+01:38:15.679 everything is subjected to database
+01:38:17.760 implementation read about the
+01:38:19.320 implementation read about the
+01:38:20.599 documentation it helps so
+01:38:24.199 thanks uh this is my LinkedIn ID and I
+01:38:27.400 have my own website where I share a lot
+01:38:29.639 of this knowledge uh I have written few
+01:38:32.000 things about databases and I'm a big fan
+01:38:34.400 of silv if you know don't know about
+01:38:36.440 silv read about it and this is the
+01:38:39.000 database internal discard server that I
+01:38:40.880 follow it's a I think it's a very big
+01:38:43.639 community and it's a world long thing uh
+01:38:46.719 people from different places of the
+01:38:48.159 world are there and people are who are
+01:38:50.480 there are the people who wrote the
+01:38:51.920 database internal book and and the other
+01:38:55.159 great peoples who have developed this
+01:38:56.760 databases so you can go there listen to
+01:38:59.440 the conversations it's a very enlighting
+01:39:02.599 thing uh and yeah please share your
+01:39:05.760 feedback if you find anything that could
+01:39:07.760 be improved anything that we should
+01:39:09.080 continue anything that could be plus
+01:39:11.679 minus things you can put it here uh we
+01:39:14.159 will read about it we will change it
+01:39:15.639 next time thanks
+01:39:21.639 okay how do I check the messages can
+01:39:25.239 someone read it is anyone looking at the
+01:39:30.800 messages okay we will share the
+01:39:32.800 presentation to you somehow you can
+01:39:35.119 check my meet yeah we will add it on
+01:39:38.639 Meetup but people who didn't sign up
+01:39:40.159 through the Meetup directly went to the
+01:39:42.000 zoom uh I will post it at least either
+01:39:45.080 on in my handle or somewhere else in the
+01:39:48.040 website or the
+01:39:50.239 handle cool thanks any questions any
+01:39:54.040 discussion
+01:39:56.679 aspects Hi Lis yeah one last personal
+01:40:00.360 question Y how did you master this this
+01:40:03.000 much of database because before joining
+01:40:05.400 this session I was just backend
+01:40:08.000 developer B
+01:40:14.400 to so I think to answer your question I
+01:40:18.199 was fortunate enough to put in such
+01:40:20.040 places to it the situation for me to do
+01:40:24.080 that more than I end up doing it on my
+01:40:26.880 own uh so it was subjective again uh at
+01:40:31.199 least that's what I do uh I think I feel
+01:40:34.159 like not everyone will get this
+01:40:35.760 opportunity what if I share my knowledge
+01:40:37.679 to people they can learn from what the
+01:40:39.920 from the mistakes I made that's why I
+01:40:42.280 know uh I don't know the answer for you
+01:40:45.400 for your question it depends again it's
+01:40:47.280 a situation that I got into so you have
+01:40:50.719 any road map any resources path like
+01:40:53.880 we should follow to master like like you
+01:40:57.119 have so there is a very interesting book
+01:41:00.040 on database internals of name itself is
+01:41:02.040 database internals you can read about it
+01:41:04.599 it's a very interesting book that's the
+01:41:07.280 book that I referred before implementing
+01:41:09.520 it whenever I uh get into this isue this
+01:41:12.920 particular Discord channel is also run
+01:41:15.239 by those people uh so it's it's a it's a
+01:41:19.360 thing that I would say you can refer
+01:41:22.000 sorry
+01:41:23.679 I think there is only one book in the I
+01:41:26.159 don't know actual auth
+01:41:30.840 somewh yeah one more thing there is
+01:41:33.040 another book on called designing data
+01:41:35.199 intensive application DD it's also very
+01:41:38.080 popular uh these two books I would
+01:41:40.920 definitely refer if you want to become a
+01:41:42.639 better backend
+01:41:46.719 developer
+01:41:48.239 cool thanks everyone
+01:41:51.119 yeah yeah one last question yeah so do
+01:41:54.599 we have to specifically learn any
+01:41:58.280 language like only python so can I
+01:42:01.280 Implement featur like this you can do it
+01:42:04.520 on python but I think it has see python
+01:42:08.119 is for a particular reason just like the
+01:42:10.080 databases the languages also are also
+01:42:12.960 there for a reason python is not a
+01:42:15.840 system level language it's an
+01:42:17.560 application language which is meant for
+01:42:19.840 solving having a better iteration while
+01:42:22.679 you are develop in you get to develop
+01:42:24.840 lot more faster in Python but it comes
+01:42:27.080 with lot of abstraction that abstraction
+01:42:29.239 kills your
+01:42:30.920 performance okay uh so you want to
+01:42:33.480 develop a database that you have to pick
+01:42:35.440 up any of the system uh level
+01:42:38.080 programming languages C C++ rest I think
+01:42:41.679 even to a point go is also
+01:42:43.840 good so for handling this tary data we
+01:42:48.400 should use like languages like rust and
+01:42:50.679 no no no no no no we use actually Java
+01:42:53.400 for that because that's an application
+01:42:54.920 that we have buil all of us scale was
+01:42:56.880 handled by the database and the
+01:42:58.159 distributed systems like kka Cassandra
+01:43:01.800 all those things those are implemented
+01:43:03.639 in different languages to your surprise
+01:43:05.760 both of them are implemented in Java
+01:43:08.000 that's the reason I hate both of them
+01:43:09.840 there are better versions of it
+01:43:11.960 Cassandra Sila is a best better version
+01:43:13.880 which is Rewritten of Cassandra in
+01:43:17.679 C++ uh similarly for kapka there is
+01:43:20.800 something called red panda which
+01:43:22.639 actually provides a
+01:43:24.000 C++ uh implementation of kka which is
+01:43:27.960 not yet picked up the uh B like Sila but
+01:43:32.320 it is really
+01:43:33.440 good but like you said we don't have to
+01:43:36.719 use those languages to implement High
+01:43:39.599 scale systems because the thing is that
+01:43:42.440 there are tradeoffs that you have to
+01:43:43.599 make the biggest tradeoff that you have
+01:43:45.280 to make is about development efficiency
+01:43:49.159 more than the scale so you can still do
+01:43:51.599 the same thing in Java also like how
+01:43:53.800 people have done it for Cassandra and
+01:43:55.239 Kafka but the good thing with Java is
+01:43:57.960 that it is very big Community it is
+01:44:00.440 widely known and there are lot of use
+01:44:03.000 case that are built on top of it you get
+01:44:04.920 lot more developers there and the
+01:44:06.840 support that you can do for the
+01:44:08.159 particular language is much easy how
+01:44:09.840 many people know rust Even in our
+01:44:13.040 organization very handful of people know
+01:44:15.159 rust so getting a developer in R is very
+01:44:18.080 hard you can develop it it will be much
+01:44:20.199 the best version of the application but
+01:44:22.440 who will maintain
+01:44:24.119 so those are all the additional aspect
+01:44:25.840 that you will get into uh which will
+01:44:29.800 actually throw away any of the
+01:44:31.440 optimization that you talk about it's a
+01:44:33.360 very 1 percentage of the use case which
+01:44:36.080 actually needs this kind of a solution
+01:44:38.280 all the 99 things we handle scale very I
+01:44:41.239 think recently I read a read a really
+01:44:43.239 interesting blog about why big data is
+01:44:46.599 dead because very hardly databases or
+01:44:51.599 very hardly there are are use cases for
+01:44:53.880 Big Data like the what is Big Data
+01:44:56.920 anymore because now the system has grown
+01:44:59.119 to a level it can handle TVs of data
+01:45:01.760 there is a postgress database which can
+01:45:03.679 handle T tens of DVS or 15s of TVs
+01:45:07.080 single instance databases so the power
+01:45:10.320 of the single instance has gone to a
+01:45:11.800 level so I think it's a question for a
+01:45:15.560 different discussion but yeah I will
+01:45:16.920 talk about it for a lot if you ask me
+01:45:18.800 that but I would suggest get better at
+01:45:21.520 what you are doing if you're doing
+01:45:23.199 python get better at how just make sure
+01:45:26.119 that you write the best python
+01:45:29.360 code okay thank you
+01:46:12.880 there are two two in happen one is that
+01:46:15.639 we were not able to handle it at the
+01:46:18.520 latency that we wanted to do that was
+01:46:20.760 one thing like someone asked uh we were
+01:46:23.360 giving data at a late period like 30
+01:46:27.360 minutes late data or 1 hour late data
+01:46:30.040 which is not acceptable first point the
+01:46:32.080 crashing bit which happened because of
+01:46:34.800 the constraint enforced by the
+01:46:36.639 AWS so when it peaked at the
+01:46:39.920 15K iOS was configured by AWS it started
+01:46:43.800 closing the
+01:46:45.080 connections okay so it started closing
+01:46:47.880 the connection so the connection closing
+01:46:50.360 started crashing the application
+01:46:53.480 so that is a hardware limit that they
+01:46:55.599 have enforced on the
+01:46:57.679 Rd we did that we did that and that's
+01:47:00.760 how we fix it in the short time so but
+01:47:04.199 that's how the crash happened which made
+01:47:05.760 us think like he post is the right
+01:47:07.440 option for this two
+01:47:26.840 because we felt that post is not meant
+01:47:28.840 for update heavy operations like I said
+01:47:31.400 right post is not yeah so we were
+01:47:34.360 thinking of any other thing other than
+01:47:36.119 post because post is not good for update
+01:47:38.360 heavy it it is very good for right heavy
+01:47:41.119 because it just puts it on the up and
+01:47:42.920 only mode it goes back but since it's
+01:47:45.760 update I have to delete the older
+01:47:47.599 records also but if it is in memory I
+01:47:50.639 have to just delete the data in memory
+01:47:53.040 so that's when we were comparing the all
+01:47:55.119 this high high availability High
+01:47:57.080 availability things we were even
+01:47:58.639 thinking of putting in Cassandra because
+01:48:00.599 we already had a cand
+01:48:08.360 cluster yes
+01:48:22.240 [Music]
+01:48:24.520 so we okay we did even that so it's a
+01:48:28.320 one year long journey that we have moved
+01:48:30.480 from A to B and C so we were using kka
+01:48:33.560 and we did partition level caching not
+01:48:36.280 on the kka site but on the application
+01:48:38.040 site we had local caching and it's a
+01:48:40.440 right through cach uh which makes sure
+01:48:42.719 that that's the way the second step we
+01:48:46.360 did yes so we move to caching we put the
+01:48:50.199 cash in between so which reduce the I a
+01:48:53.080 huge number we came from 20K to 3K iops
+01:48:57.320 from that point because every iops like
+01:48:59.400 every insert was happening to the in
+01:49:01.119 memory and then only it was going and
+01:49:03.239 the reads were fed from the cash itself
+01:49:06.119 it didn't go to the actual disk or the
+01:49:09.679 uh database so that we fixed but then we
+01:49:12.800 thought like it could be done even
+01:49:14.560 better and we had a very long debate
+01:49:16.920 there was even a solution by AWS called
+01:49:20.239 inmemory DB which provides you with the
+01:49:22.800 persistence and the red red is with the
+01:49:25.880 persistence uh we compared it we
+01:49:28.080 compared the cost and then our client
+01:49:30.320 took a call that I'm fine with losing
+01:49:32.920 one message sometime in rare case but I
+01:49:35.800 want to save cost so inmemory DB is much
+01:49:39.280 costlier than having a simple uh
+01:49:47.000 red cool anything
+01:49:51.040 else hi uh YH I had a question yeah uh I
+01:49:56.599 think earlier you were talking about
+01:49:58.520 concurrency uh point I completely was
+01:50:02.560 not able to gather it uh could you
+01:50:04.960 please uh explain that part concurrency
+01:50:09.360 what uh there was a slide just uh during
+01:50:13.159 which you were talking about
+01:50:14.920 concurrency uh like I think the second
+01:50:17.800 half of the presentation if I'm not
+01:50:19.760 wrong yeah I don't have the number of
+01:50:22.760 this SL as such so I think uh do you
+01:50:26.440 want to redo the same thing I said
+01:50:28.199 because the uh you will get this
+01:50:30.880 recording if you want to know about it
+01:50:33.280 you can go through it I didn't uh the
+01:50:35.960 thing was I didn't understand the
+01:50:37.400 scenario yes
+01:50:40.360 uh yes this point I I understood about
+01:50:43.760 the lock uh that you said okay which we
+01:50:47.000 use so that uh you know we can handle
+01:50:50.440 multiple operations which happen
+01:50:53.199 concurrently okay but after that you
+01:50:55.679 were explaining uh something related to
+01:50:58.840 how you handled it I think I didn't
+01:51:01.000 follow that okay this bit I think I did
+01:51:04.679 it lock free and then these are the
+01:51:07.040 points on how I did it uh I think we are
+01:51:11.199 running out of time that's the thing I
+01:51:13.960 think I can't explain it again but maybe
+01:51:16.040 go through this thing you can ping me on
+01:51:18.280 LinkedIn uh I can I'm happy to explain
+01:51:21.360 to you okay thank you appreciate it
+01:51:25.280 thanks for that any other
+01:51:30.920 questions cool thanks everyone thanks
+01:51:33.440 for joining
